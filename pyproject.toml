@@ -1,0 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name="autosharing_heuristics"
+version="0.1"
+dependencies = [
+  "numpy",
+]
