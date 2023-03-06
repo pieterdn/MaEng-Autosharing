@@ -1,5 +1,6 @@
 from __future__ import annotations
 import numpy as np
+from typing import NamedTuple
 import numpy.typing as npt
 
 
@@ -14,3 +15,16 @@ class RequestSolution:
         if car < 0:
             return None
         return car
+
+class RequestStruct(NamedTuple):
+    zone: int
+    day: int
+    start: int
+    time: int
+    cars: np.array
+    pen1: int
+    pen2: int
+
+class ZoneStruct(NamedTuple):
+    zonerel: np.array
+    nextto: np.array
