@@ -17,14 +17,20 @@ class RequestSolution:
         return car
 
 class RequestStruct(NamedTuple):
-    zone: int
-    day: int
-    start: int
-    time: int
-    cars: np.array
-    pen1: int
-    pen2: int
+    '''
+    Elke request (reservatie) is van het type RequestStruct
+    '''
+    zone:   int                     # ZoneID waar reservatie gemaakt werd
+    day:    int                     # Dag waarop reservatie start (gedefinieerd als index)
+    start:  int                     # Starttijd van reservatie (minuten vanaf middernacht)
+    time:   int                     # Duurtijd van de reservatie
+    cars:   npt.NDArray[np.int16]   # Voertuiglijst waaraan deze reservatie kan worden toegewezen
+    pen1:   int                     # Kost om reservatie niet toe te wijzen aan voertuig
+    pen2:   int                     # Kost om reservatie toe te wijzen in aanliggende zone
 
 class ZoneStruct(NamedTuple):
-    zonerel: np.array
-    nextto: np.array
+    '''
+    Elke zone is van het type ZoneStruct
+    '''
+    zonerel:    npt.NDArray[np.bool8]   # Relatie van een zone tov alle andere 1=aanl, 0 niet
+    nextto:     npt.NDArray[np.int16]   # Lijst die aanliggende zones aangeeft voor een zone
