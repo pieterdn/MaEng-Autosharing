@@ -40,13 +40,13 @@ class Solution:
         req_struct = self.reqs[req]
         req_start = req_struct.day*MINUTES_IN_DAY + req_struct.start
         req_end = req_start + req_struct.time
-        print("feasible")
-        print(self.car_to_reqNumber[car])
+        #print("feasible")
+        #print(self.car_to_reqNumber[car])
         for alloc_req in self.car_to_reqNumber[car]:
             areq_struct = self.reqs[alloc_req]
             areq_start = areq_struct.day*MINUTES_IN_DAY + areq_struct.start
             areq_end = areq_start + areq_struct.time
-            print(range(max(req_start, areq_start), min(req_end, areq_end)+1))
+            #print(range(max(req_start, areq_start), min(req_end, areq_end)+1))
             if len(range(max(req_start, areq_start), min(req_end, areq_end)+1)) != 0:
                 return False
         return True

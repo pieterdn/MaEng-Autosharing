@@ -2,14 +2,14 @@ from .model import Solution
 import csv
 
 class ProcessOutput:
-    def __init__(self, solution: Solution) -> None:
+    def __init__(self, output_file, solution: Solution) -> None:
         self.car_to_zone =  solution.car_to_zone
         self.req_to_car = solution.req_to_car
         self.cost = solution.cost
-        self.writeCSV()
+        self.writeCSV(output_file)
 
-    def writeCSV(self):
-        with open('solution.csv', 'w', newline='') as csv_file:
+    def writeCSV(self, output_file):
+        with open(output_file, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow([self.cost])
             writer.writerow(["+Vehicle assignments"])

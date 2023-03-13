@@ -5,14 +5,14 @@ import numpy.typing as npt
 import csv
 
 class ProcessInput:
-    def __init__(self) -> None:
+    def __init__(self, input_file) -> None:
         self.requests = []
         self.zones = []
         self.caramount = 0
-        self.readCSV()
+        self.readCSV(input_file)
 
-    def readCSV(self):
-        with open('../../input_files/360_5_71_25.csv', newline='') as csv_file:
+    def readCSV(self, input_file):
+        with open('../../input_files/' + input_file, newline='') as csv_file:
             reader = csv.reader(csv_file, delimiter=';')
             
             while 1:
