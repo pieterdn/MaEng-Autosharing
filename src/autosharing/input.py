@@ -12,7 +12,7 @@ class ProcessInput:
         self.readCSV()
 
     def readCSV(self):
-        with open('toy1.csv', newline='') as csv_file:
+        with open('../../input_files/360_5_71_25.csv', newline='') as csv_file:
             reader = csv.reader(csv_file, delimiter=';')
             
             while 1:
@@ -34,7 +34,7 @@ class ProcessInput:
                             break
 
     def readRequests(self, reader, amount):
-        print("Processing requests...")
+        #print("Processing requests...")
         for i in range(int(amount)):
             reqrow = reader.__next__()
             car_list = reqrow[5].split(",")
@@ -50,11 +50,11 @@ class ProcessInput:
             pen2 =      int(reqrow[7])
 
             newreq = RequestStruct(zoneid, day, start, time, cars, pen1, pen2)
-            print(newreq)
+            #print(newreq)
             self.requests.append(newreq)
 
     def readZones(self, reader, amount):
-        print("Processing zones...")
+        #print("Processing zones...")
         for i in range(int(amount)):
             zonerow = reader.__next__()
             nextto_list = zonerow[1].split(",")
@@ -65,7 +65,7 @@ class ProcessInput:
                 if(k in nextto_list):
                     zone_rel[k] = True
             newzone = ZoneStruct(zone_rel, np.array(nextto_list))
-            print(newzone)
+            #print(newzone)
             self.zones.append(newzone)
 
 if __name__ == "__main__":
