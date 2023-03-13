@@ -40,17 +40,20 @@ class Solution:
         req_struct = self.reqs[req]
         req_start = req_struct.day*MINUTES_IN_DAY + req_struct.start
         req_end = req_start + req_struct.time
+        print("feasible")
+        print(self.car_to_reqNumber[car])
         for alloc_req in self.car_to_reqNumber[car]:
             areq_struct = self.reqs[alloc_req]
             areq_start = areq_struct.day*MINUTES_IN_DAY + areq_struct.start
             areq_end = areq_start + areq_struct.time
+            print(range(max(req_start, areq_start), min(req_end, areq_end)+1))
             if len(range(max(req_start, areq_start), min(req_end, areq_end)+1)) != 0:
                 return False
         return True
 
     def costOfZone(self, req: int, zone: int) -> Tuple[int, int]:
         req_struct = self.reqs[req]
-        if self.zones[zone].nextto[req_struct.zone]:
+        if self.zones[zone].zonerel[req_struct.zone]:
             return (req_struct.pen2, 2)
         elif zone == req_struct.zone:
             return (0, 0)
@@ -64,7 +67,7 @@ class Solution:
         for req in self.car_to_reqNumber[car]:
             # req_struct = self.reqs[req]
             new_cost, pen = self.costOfZone(req, zone)
-            if pen == 0 or 2:
+            if pen == 0 or pen == 2:
                 self.changeCost(req, new_cost)
             elif pen == 1:
                 self.changeCost(req, new_cost)
@@ -91,10 +94,13 @@ class Solution:
     def carHardChange(self, req: int, car: int):
         old_car = self.req_to_car[req]
         self.req_to_car[req] = car
-        self.car_to_req[old_car][req] = False
-        self.car_to_reqNumber[car].remove(req)
+        if old_car > 0:
+            self.car_to_req[req][old_car] = False
+            self.car_to_reqNumber[old_car].remove(req)
         if car > 0:
-            self.car_to_req[car][req] = True
+            # print(self.car_to_req)
+            # print(car, req)
+            self.car_to_req[req][car] = True
             self.car_to_reqNumber[car].add(req)
 
 

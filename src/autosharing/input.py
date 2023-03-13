@@ -1,5 +1,5 @@
 
-from model import RequestStruct, ZoneStruct
+from .model import RequestStruct, ZoneStruct
 import numpy as np
 import numpy.typing as npt
 import csv
