@@ -84,5 +84,5 @@ class ZoneStruct(NamedTuple):
     '''
     Elke zone is van het type ZoneStruct
     '''
-    zonerel:    npt.NDArray[np.bool8]   # Relatie van een zone tov alle andere 1=aanl, 0 niet
+    zonerel:    npt.NDArray[np.bool_]   # Relatie van een zone tov alle andere 1=aanl, 0 niet
     nextto:     npt.NDArray[np.int16]   # Lijst die aanliggende zones aangeeft voor een zone
