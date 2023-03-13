@@ -1,6 +1,6 @@
 from __future__ import annotations
 import numpy as np
-from typing import NamedTuple, List, Set
+from typing import NamedTuple, List, Set, Tuple
 import numpy.typing as npt
 
 MINUTES_IN_DAY = 1440
@@ -49,23 +49,54 @@ class Solution:
                 return False
         return True
 
-    def costOfCar(self, req: int, car: int) -> int:
-        zone_car = self.car_to_zone[car]
+    def costOfZone(self, req: int, zone: int) -> Tuple[int, int]:
         req_struct = self.reqs[req]
-        if self.zones[zone_car].nextto[req_struct.zone]:
-            return req_struct.pen2
-        elif zone_car == req_struct.zone:
-            return 0
-        return req_struct.pen1
+        if self.zones[zone].nextto[req_struct.zone]:
+            return (req_struct.pen2, 2)
+        elif zone == req_struct.zone:
+            return (0, 0)
+        return (req_struct.pen1, 1)
 
-    def addCarToReq(self, req: int, car: int):
+    def costOfCar(self, req: int, car: int) -> Tuple[int, int]:
+        zone_car = self.car_to_zone[car]
+        return self.costOfZone(req, zone_car)
+
+    def changeCarZone(self, car: int, zone: int):
+        for req in self.car_to_reqNumber[car]:
+            # req_struct = self.reqs[req]
+            new_cost, pen = self.costOfZone(req, zone)
+            if pen == 0 or 2:
+                self.changeCost(req, new_cost)
+            elif pen == 1:
+                self.changeCost(req, new_cost)
+                self.carHardChange(req, -1)
+        self.zoneHardChange(car, zone)
+
+    def changeCost(self, req: int, new_cost: int):
         old_cost = self.cost_per_req[req]
-        new_cost = self.costOfCar(req, car)
-        self.req_to_car[req] = car
-        self.car_to_req[car][req] = 1
-        self.car_to_reqNumber[car].add(req)
+        self.cost_per_req[req] = new_cost
         self.cost += new_cost - old_cost
 
+
+    def addCarToReq(self, req: int, car: int):
+        new_cost = self.costOfCar(req, car)[0]
+        self.carHardChange(req, car)
+        self.changeCost(req, new_cost)
+
+    def zoneHardChange(self, car: int, zone: int):
+        old_zone = self.car_to_zone[car]
+        self.car_to_zone[car] = zone
+        self.zone_to_car[old_zone] = False
+        self.zone_to_car[zone] = True
+
+    def carHardChange(self, req: int, car: int):
+        old_car = self.req_to_car[req]
+        self.req_to_car[req] = car
+        self.car_to_req[old_car][req] = False
+        self.car_to_reqNumber[car].remove(req)
+        if car > 0:
+            self.car_to_req[car][req] = True
+            self.car_to_reqNumber[car].add(req)
 
 
 class RequestStruct(NamedTuple):
