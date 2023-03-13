@@ -5,7 +5,6 @@ import numpy.typing as npt
 
 MINUTES_IN_DAY = 1440
 
-
 class Solution:
     req_to_car: npt.NDArray[np.int16]
     car_to_req: npt.NDArray[np.bool_]
