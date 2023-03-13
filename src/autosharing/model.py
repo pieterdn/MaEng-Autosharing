@@ -4,7 +4,7 @@ from typing import NamedTuple
 import numpy.typing as npt
 
 
-class RequestSolution:
+class Solution:
     req_to_car: npt.NDArray[np.int16]
 
     def __init__(self, num_reqs, num_cars) -> None:
