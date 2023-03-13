@@ -12,7 +12,7 @@ class ProcessInput:
         self.readCSV(input_file)
 
     def readCSV(self, input_file):
-        with open('../../input_files/' + input_file, newline='') as csv_file:
+        with open(input_file, newline='') as csv_file:
             reader = csv.reader(csv_file, delimiter=';')
             
             while 1:

@@ -7,9 +7,9 @@ MINUTES_IN_DAY = 1440
 
 class Solution:
     req_to_car: npt.NDArray[np.int16]
-    car_to_req: npt.NDArray[np.bool_]
+    req_to_car_bools: npt.NDArray[np.bool_]
     car_to_reqNumber: List[Set[int]]
-    zone_to_car: npt.NDArray[np.bool_]
+    car_to_zone_bools: npt.NDArray[np.bool_]
     car_to_zone: npt.NDArray[np.int16]
     reqs: List[RequestStruct]
     zones: List[ZoneStruct]
@@ -26,8 +26,8 @@ class Solution:
         for i, req in enumerate(reqs):
             self.cost_per_req[i] = req.pen1
             self.cost += req.pen1
-        self.car_to_req = np.zeros((num_reqs, num_cars), dtype=np.bool_)
-        self.zone_to_car = np.zeros((len(zones), num_cars), dtype=np.bool_)
+        self.req_to_car_bools = np.zeros((num_reqs, num_cars), dtype=np.bool_)
+        self.car_to_zone_bools = np.zeros((len(zones), num_cars), dtype=np.bool_)
         self.car_to_zone = np.full(num_cars, -1, dtype=np.int16)
         self.reqs = reqs
         self.zones = zones
@@ -35,7 +35,11 @@ class Solution:
 
     def feasibleCarToReq(self, req: int, car: int) -> bool:
         # zelfde req zelfde auto?
-        if self.car_to_zone[car] < 0:
+        zone = self.car_to_zone[car] 
+        if zone < 0:
+            return False
+        _, feasible = self.costAndFeasibleZone(req, zone)
+        if not feasible:
             return False
         req_struct = self.reqs[req]
         req_start = req_struct.day*MINUTES_IN_DAY + req_struct.start
@@ -51,25 +55,25 @@ class Solution:
                 return False
         return True
 
-    def costOfZone(self, req: int, zone: int) -> Tuple[int, int]:
+    def costAndFeasibleZone(self, req: int, zone: int) -> Tuple[int, bool]:
         req_struct = self.reqs[req]
         if self.zones[zone].zonerel[req_struct.zone]:
-            return (req_struct.pen2, 2)
+            return (req_struct.pen2, True)
         elif zone == req_struct.zone:
-            return (0, 0)
-        return (req_struct.pen1, 1)
+            return (0, True)
+        return (req_struct.pen1, False)
 
-    def costOfCar(self, req: int, car: int) -> Tuple[int, int]:
+    def costOfCar(self, req: int, car: int) -> Tuple[int, bool]:
         zone_car = self.car_to_zone[car]
-        return self.costOfZone(req, zone_car)
+        return self.costAndFeasibleZone(req, zone_car)
 
     def changeCarZone(self, car: int, zone: int):
         for req in self.car_to_reqNumber[car]:
             # req_struct = self.reqs[req]
-            new_cost, pen = self.costOfZone(req, zone)
-            if pen == 0 or pen == 2:
+            new_cost, feasible = self.costAndFeasibleZone(req, zone)
+            if feasible:
                 self.changeCost(req, new_cost)
-            elif pen == 1:
+            else:
                 self.changeCost(req, new_cost)
                 self.carHardChange(req, -1)
         self.zoneHardChange(car, zone)
@@ -79,7 +83,6 @@ class Solution:
         self.cost_per_req[req] = new_cost
         self.cost += new_cost - old_cost
 
-
     def addCarToReq(self, req: int, car: int):
         new_cost = self.costOfCar(req, car)[0]
         self.carHardChange(req, car)
@@ -87,20 +90,19 @@ class Solution:
 
     def zoneHardChange(self, car: int, zone: int):
         old_zone = self.car_to_zone[car]
-        self.car_to_zone[car] = zone
-        self.zone_to_car[old_zone] = False
-        self.zone_to_car[zone] = True
+        self.car_to_zone_bools[old_zone][car] = False
+        if zone >= 0:
+            self.car_to_zone[car] = zone
+            self.car_to_zone_bools[zone][car] = True
 
     def carHardChange(self, req: int, car: int):
         old_car = self.req_to_car[req]
         self.req_to_car[req] = car
-        if old_car > 0:
-            self.car_to_req[req][old_car] = False
+        if old_car >= 0:
+            self.req_to_car_bools[req][old_car] = False
             self.car_to_reqNumber[old_car].remove(req)
-        if car > 0:
-            # print(self.car_to_req)
-            # print(car, req)
-            self.car_to_req[req][car] = True
+        if car >= 0:
+            self.req_to_car_bools[req][car] = True
             self.car_to_reqNumber[car].add(req)
 
 
