@@ -6,14 +6,14 @@ import numpy.typing as npt
 MINUTES_IN_DAY = 1440
 
 class Solution:
-    req_to_car: npt.NDArray[np.int16]
-    req_to_car_bools: npt.NDArray[np.bool_]
-    car_to_reqNumber: List[Set[int]]
-    car_to_zone_bools: npt.NDArray[np.bool_]
-    car_to_zone: npt.NDArray[np.int16]
-    reqs: List[RequestStruct]
-    zones: List[ZoneStruct]
-    cost_per_req: npt.NDArray[np.int16]
+    req_to_car: npt.NDArray[np.int16]           # Give req as index get car
+    req_to_car_bools: npt.NDArray[np.bool_]     # 2D bool array: a row with len = #cars for every request
+    car_to_reqNumber: List[Set[int]]            # Give car as index get list of reqs
+    car_to_zone_bools: npt.NDArray[np.bool_]    # 2D bool array: a row with len = #cars for every zone
+    car_to_zone: npt.NDArray[np.int16]          # Give car as index get zone
+    reqs: List[RequestStruct]                   # List of requests
+    zones: List[ZoneStruct]                     # List of zones
+    cost_per_req: npt.NDArray[np.int16]         # Give req as index get cost
     cost: int
 
     def __init__(self, num_reqs: int,
@@ -44,13 +44,10 @@ class Solution:
         req_struct = self.reqs[req]
         req_start = req_struct.day*MINUTES_IN_DAY + req_struct.start
         req_end = req_start + req_struct.time
-        #print("feasible")
-        #print(self.car_to_reqNumber[car])
         for alloc_req in self.car_to_reqNumber[car]:
             areq_struct = self.reqs[alloc_req]
             areq_start = areq_struct.day*MINUTES_IN_DAY + areq_struct.start
             areq_end = areq_start + areq_struct.time
-            #print(range(max(req_start, areq_start), min(req_end, areq_end)+1))
             if len(range(max(req_start, areq_start), min(req_end, areq_end)+1)) != 0:
                 return False
         return True
@@ -96,6 +93,7 @@ class Solution:
             self.car_to_zone_bools[zone][car] = True
 
     def carHardChange(self, req: int, car: int):
+        print(self.car_to_reqNumber)
         old_car = self.req_to_car[req]
         self.req_to_car[req] = car
         if old_car >= 0:
@@ -104,6 +102,7 @@ class Solution:
         if car >= 0:
             self.req_to_car_bools[req][car] = True
             self.car_to_reqNumber[car].add(req)
+        print(self.car_to_reqNumber)
 
 
 class RequestStruct(NamedTuple):
