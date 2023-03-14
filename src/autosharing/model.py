@@ -8,7 +8,7 @@ MINUTES_IN_DAY = 1440
 class Solution:
     req_to_car: npt.NDArray[np.int16]           # Give req as index get car
     req_to_car_bools: npt.NDArray[np.bool_]     # 2D bool array: a row with len = #cars for every request
-    car_to_reqNumber: List[Set[int]]            # Give car as index get list of reqs
+    car_to_reqNumber: List[List[int]]            # Give car as index get list of reqs
     car_to_zone_bools: npt.NDArray[np.bool_]    # 2D bool array: a row with len = #cars for every zone
     car_to_zone: npt.NDArray[np.int16]          # Give car as index get zone
     reqs: List[RequestStruct]                   # List of requests
@@ -31,7 +31,9 @@ class Solution:
         self.car_to_zone = np.full(num_cars, -1, dtype=np.int16)
         self.reqs = reqs
         self.zones = zones
-        self.car_to_reqNumber = [set()]*num_cars
+        self.car_to_reqNumber = [[]]
+        for k in range(num_cars-1):
+            self.car_to_reqNumber.append([])
 
     def feasibleCarToReq(self, req: int, car: int) -> bool:
         # zelfde req zelfde auto?
@@ -93,7 +95,6 @@ class Solution:
             self.car_to_zone_bools[zone][car] = True
 
     def carHardChange(self, req: int, car: int):
-        print(self.car_to_reqNumber)
         old_car = self.req_to_car[req]
         self.req_to_car[req] = car
         if old_car >= 0:
@@ -101,8 +102,7 @@ class Solution:
             self.car_to_reqNumber[old_car].remove(req)
         if car >= 0:
             self.req_to_car_bools[req][car] = True
-            self.car_to_reqNumber[car].add(req)
-        print(self.car_to_reqNumber)
+            self.car_to_reqNumber[car].append(req)
 
 
 class RequestStruct(NamedTuple):
