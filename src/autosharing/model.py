@@ -42,10 +42,16 @@ class Solution:
         zone = self.car_to_zone[car] 
         if zone < 0:
             return False
+        req_struct = self.reqs[req]
+        ok = False
+        for cr in req_struct.cars:
+            if cr == car:
+                ok = True
+        if not ok:
+            return False
         _, feasible = self.costAndFeasibleZone(req, zone)
         if not feasible:
             return False
-        req_struct = self.reqs[req]
         req_start = req_struct.day*MINUTES_IN_DAY + req_struct.start
         req_end = req_start + req_struct.time
         for alloc_req in self.car_to_reqNumber[car]:
@@ -90,6 +96,11 @@ class Solution:
         old_cost = self.cost_per_req[req]
         self.cost_per_req[req] = new_cost
         self.cost += new_cost - old_cost
+
+    def newCost(self, req: int, car: int) -> int:
+        new_cost, _ = self.costOfCar(req, car)
+        old_cost = self.cost_per_req[req]
+        return (self.cost + new_cost - old_cost)
 
     def addCarToReq(self, req: int, car: int):
         new_cost = self.costOfCar(req, car)[0]

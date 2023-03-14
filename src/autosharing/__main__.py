@@ -6,6 +6,8 @@ from autosharing.output import ProcessOutput
 import sys
 import time
 import argparse
+import random
+import copy
 
 def create_initial_input(reqs: List[RequestStruct],
                          zones: List[ZoneStruct],
@@ -34,6 +36,20 @@ def create_initial_input(reqs: List[RequestStruct],
     return reqsol
 
 
+def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool:
+    rand_reqs = random.sample(reqs_ints, k=len(reqs_ints))
+    rand_cars = random.sample(cars_ints, k=len(cars_ints))
+    for req in rand_reqs:
+        for car in rand_cars:
+            if not reqsol.feasibleCarToReq(req, car):
+                continue
+            new_cost = reqsol.newCost(req, car)
+            if new_cost >= old_cost:
+                continue
+            reqsol.addCarToReq(req, car)
+            return True
+    return False
+
 
 if __name__ == "__main__":
 
@@ -44,6 +60,8 @@ if __name__ == "__main__":
     parser.add_argument('random_seed', type=int)
     parser.add_argument('thread_amount', type=int)
     argumentNamespace = parser.parse_args()
+    # init seed
+    print(argumentNamespace.random_seed)
 
     #---------------Start of timing window---------------
     start_time = time.perf_counter()
@@ -53,6 +71,15 @@ if __name__ == "__main__":
 
     #Create initial solution
     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
+    old_cost = reqsol.cost
+    best_sol = reqsol
+    reqs_ints = range(0, len(pi.requests))
+    cars_ints = range(0, pi.caramount)
+    zone_ints = range(0, len(pi.zones))
+    random.seed(argumentNamespace.random_seed)
+    while (time.perf_counter() - start_time) < argumentNamespace.time_limit_s:
+        if small_operator(reqsol, reqs_ints, cars_ints) and reqsol.cost < best_sol.cost:
+            best_sol = reqsol
     
     if((time.perf_counter() - start_time) < argumentNamespace.time_limit_s):
         #Find better solution
@@ -62,5 +89,5 @@ if __name__ == "__main__":
     #----------------End of timing window----------------
 
     print(f"Elapsed time: {elapsed_time}s")
-    ProcessOutput(argumentNamespace.output_file, reqsol)
+    ProcessOutput(argumentNamespace.output_file, best_sol)
 
