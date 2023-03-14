@@ -9,7 +9,7 @@ class ProcessOutput:
         self.writeCSV(output_file)
 
     def writeCSV(self, output_file):
-        with open(output_file, 'w', newline='') as csv_file:
+        with open('../../output_files/' + output_file, 'w', newline='') as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow([self.cost])
             writer.writerow(["+Vehicle assignments"])

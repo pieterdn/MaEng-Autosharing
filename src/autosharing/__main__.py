@@ -5,6 +5,7 @@ from autosharing.input import ProcessInput
 from autosharing.output import ProcessOutput
 import sys
 import time
+import argparse
 
 def create_initial_input(reqs: List[RequestStruct],
                          zones: List[ZoneStruct],
@@ -44,22 +45,25 @@ def create_initial_input(reqs: List[RequestStruct],
 
 
 if __name__ == "__main__":
-    n = len(sys.argv)
-    if n < 6 or n > 6:
-        print("Not enough arguments, expecting: <input file> <output file> <time limit in s> <random seed> <number of threads>")
-        sys.exit()
-    print(f"Input file: {sys.argv[1]} | Output file: {sys.argv[2]} | Time limit(s): {sys.argv[3]} | Seed: {sys.argv[4]} | # of threads: {sys.argv[5]}")
+
+    parser = argparse.ArgumentParser(description="Finding a good solution to the autosharing problem.")
+    parser.add_argument('input_file')
+    parser.add_argument('output_file')
+    parser.add_argument('time_limit_s', type=int)
+    parser.add_argument('random_seed', type=int)
+    parser.add_argument('thread_amount', type=int)
+    argumentNamespace = parser.parse_args()
 
     #---------------Start of timing window---------------
     start_time = time.perf_counter()
 
     #Read input file and create model
-    pi = ProcessInput(sys.argv[1])
+    pi = ProcessInput(argumentNamespace.input_file)
 
     #Create initial solution
     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
     
-    if((time.perf_counter() - start_time) < int(sys.argv[3])):
+    if((time.perf_counter() - start_time) < argumentNamespace.time_limit_s):
         #Find better solution
         exit
 
@@ -67,5 +71,5 @@ if __name__ == "__main__":
     print(f"Elapsed time: {elapsed_time}s")
     #----------------End of timing window----------------
 
-    ProcessOutput(sys.argv[2], reqsol)
+    ProcessOutput(argumentNamespace.output_file, reqsol)
 
