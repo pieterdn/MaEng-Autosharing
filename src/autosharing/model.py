@@ -35,6 +35,10 @@ class Solution:
         for k in range(num_cars-1):
             self.car_to_reqNumber.append([])
 
+    """
+    Takes reqid and carid and checks whether the car could be feasible for the 
+    request.
+    """
     def feasibleCarToReq(self, req: int, car: int) -> bool:
         # zelfde req zelfde auto?
         zone = self.car_to_zone[car] 
@@ -54,6 +58,10 @@ class Solution:
                 return False
         return True
 
+    """
+    Takes a reqid and the zone of a car, checks whether the zone of the car is 
+    feasible in combination with the req and returns corresponding cost and bool.
+    """
     def costAndFeasibleZone(self, req: int, zone: int) -> Tuple[int, bool]:
         req_struct = self.reqs[req]
         if self.zones[zone].zonerel[req_struct.zone]:
@@ -77,6 +85,9 @@ class Solution:
                 self.carHardChange(req, -1)
         self.zoneHardChange(car, zone)
 
+    """
+    Takes a reqid and a new cost and updates the cost_per_req and cost values.
+    """
     def changeCost(self, req: int, new_cost: int):
         old_cost = self.cost_per_req[req]
         self.cost_per_req[req] = new_cost
@@ -87,6 +98,9 @@ class Solution:
         self.carHardChange(req, car)
         self.changeCost(req, new_cost)
 
+    """
+    Takes a carid and a zone and updates car_to_zone and car_to_zone_bools.
+    """
     def zoneHardChange(self, car: int, zone: int):
         old_zone = self.car_to_zone[car]
         self.car_to_zone_bools[old_zone][car] = False
@@ -94,6 +108,9 @@ class Solution:
             self.car_to_zone[car] = zone
             self.car_to_zone_bools[zone][car] = True
 
+    """
+    Takes a reqid and a carid and updates req_to_car, req_to_car_bools and car_to_reqNumber.
+    """
     def carHardChange(self, req: int, car: int):
         old_car = self.req_to_car[req]
         self.req_to_car[req] = car
