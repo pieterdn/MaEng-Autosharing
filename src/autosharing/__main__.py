@@ -39,6 +39,7 @@ def create_initial_input(reqs: List[RequestStruct],
 def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool:
     rand_reqs = random.sample(reqs_ints, k=len(reqs_ints))
     rand_cars = random.sample(cars_ints, k=len(cars_ints))
+    # loop only over cars in feasible zone not all
     for req in rand_reqs:
         for car in rand_cars:
             if not reqsol.feasibleCarToReq(req, car):
