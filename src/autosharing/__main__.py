@@ -51,6 +51,19 @@ def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool
             return True
     return False
 
+def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range):
+    rand_car = random.randrange(cars_int[0], cars_int[-1])
+    rand_zone = random.randrange(0, len(reqsol.zones) - 1)
+    lost_before = [i for i, car in enumerate(reqsol.req_to_car) if car < 0]
+    lost = reqsol.changeCarZone(rand_car, rand_zone)
+    for req in lost_before:
+        if reqsol.feasibleCarToReq(req, rand_car):
+            reqsol.addCarToReq(req, rand_car)
+    for req in lost:
+        for car in cars_int:
+            if reqsol.feasibleCarToReq(req, car):
+                reqsol.addCarToReq(req, car)
+
 
 if __name__ == "__main__":
 
@@ -79,8 +92,11 @@ if __name__ == "__main__":
     zone_ints = range(0, len(pi.zones))
     random.seed(argumentNamespace.random_seed)
     while (time.perf_counter() - start_time) < argumentNamespace.time_limit_s:
-        if small_operator(reqsol, reqs_ints, cars_ints) and reqsol.cost < best_sol.cost:
+        if not small_operator(reqsol, reqs_ints, cars_ints):
             best_sol = reqsol
+        else:
+            best_sol = copy.deepcopy(reqsol)
+            big_operator(reqsol, reqs_ints, cars_ints)
     
     if((time.perf_counter() - start_time) < argumentNamespace.time_limit_s):
         #Find better solution

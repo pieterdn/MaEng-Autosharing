@@ -2,6 +2,7 @@ from __future__ import annotations
 import numpy as np
 from typing import NamedTuple, List, Set, Tuple
 import numpy.typing as npt
+import copy
 
 MINUTES_IN_DAY = 1440
 
@@ -78,16 +79,20 @@ class Solution:
         zone_car = self.car_to_zone[car]
         return self.costAndFeasibleZone(req, zone_car)
 
-    def changeCarZone(self, car: int, zone: int):
-        for req in self.car_to_reqNumber[car]:
+    def changeCarZone(self, car: int, zone: int) -> List[int]:
+        lst: List[int] = list()
+        reqs = copy.copy(self.car_to_reqNumber[car])
+        for req in reqs:
             # req_struct = self.reqs[req]
             new_cost, feasible = self.costAndFeasibleZone(req, zone)
             if feasible:
                 self.changeCost(req, new_cost)
             else:
+                lst.append(req)
                 self.changeCost(req, new_cost)
                 self.carHardChange(req, -1)
         self.zoneHardChange(car, zone)
+        return lst
 
     """
     Takes a reqid and a new cost and updates the cost_per_req and cost values.
