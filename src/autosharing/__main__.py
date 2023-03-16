@@ -46,6 +46,7 @@ def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool
                 continue
             new_cost = reqsol.newCost(req, car)
             if new_cost >= old_cost:
+            if new_cost > reqsol.cost:
                 continue
             reqsol.addCarToReq(req, car)
             return True
