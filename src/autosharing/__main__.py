@@ -45,7 +45,7 @@ def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool
             if not reqsol.feasibleCarToReq(req, car):
                 continue
             new_cost = reqsol.newCost(req, car)
-            if new_cost > reqsol.cost:
+            if new_cost >= reqsol.cost:
                 continue
             reqsol.addCarToReq(req, car)
             return True
@@ -85,17 +85,17 @@ if __name__ == "__main__":
 
     #Create initial solution
     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
-    old_cost = reqsol.cost
+    best_cost = reqsol.cost
     best_sol = reqsol
     reqs_ints = range(0, len(pi.requests))
     cars_ints = range(0, pi.caramount)
     zone_ints = range(0, len(pi.zones))
     random.seed(argumentNamespace.random_seed)
     while (time.perf_counter() - start_time) < argumentNamespace.time_limit_s:
-        if not small_operator(reqsol, reqs_ints, cars_ints):
-            best_sol = reqsol
-        else:
+        if reqsol.cost < best_cost:
+            best_cost = reqsol.cost
             best_sol = copy.deepcopy(reqsol)
+        if not small_operator(reqsol, reqs_ints, cars_ints):
             big_operator(reqsol, reqs_ints, cars_ints)
     
     if((time.perf_counter() - start_time) < argumentNamespace.time_limit_s):
