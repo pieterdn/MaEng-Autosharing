@@ -1,8 +1,8 @@
-from .model import Solution
+from .model import SolutionModel
 import csv
 
 class ProcessOutput:
-    def __init__(self, output_file, solution: Solution) -> None:
+    def __init__(self, output_file, solution: SolutionModel) -> None:
         self.car_to_zone =  solution.car_to_zone
         self.req_to_car = solution.req_to_car
         self.cost = solution.cost

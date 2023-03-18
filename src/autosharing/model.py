@@ -3,8 +3,19 @@ import numpy as np
 from typing import NamedTuple, List, Set, Tuple
 import numpy.typing as npt
 import copy
+from dataclasses import dataclass
 
 MINUTES_IN_DAY = 1440
+
+
+@dataclass
+class SolutionModel:
+    req_to_car: npt.NDArray[np.int16]           # Give req as index get car
+    car_to_zone: npt.NDArray[np.int16]          # Give car as index get zone
+    reqs: List[RequestStruct]                   # List of requests
+    zones: List[ZoneStruct]                     # List of zones
+    cost: int
+
 
 class Solution:
     req_to_car: npt.NDArray[np.int16]           # Give req as index get car
@@ -33,6 +44,16 @@ class Solution:
         self.reqs = reqs
         self.zones = zones
         self.car_to_reqNumber = [set() for _ in range(num_cars)]
+
+
+    def toModel(self) -> SolutionModel:
+        return SolutionModel(
+            np.copy(self.req_to_car),
+            np.copy(self.car_to_zone),
+            self.reqs,
+            self.zones,
+            self.cost
+        )
 
     """
     Takes reqid and carid and checks whether the car could be feasible for the 

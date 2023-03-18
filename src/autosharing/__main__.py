@@ -7,7 +7,7 @@ import sys
 import time
 import argparse
 import random
-import copy
+import asyncio
 
 def create_initial_input(reqs: List[RequestStruct],
                          zones: List[ZoneStruct],
@@ -65,6 +65,13 @@ def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range):
                 reqsol.addCarToReq(req, car)
 
 
+end = False
+async def end_of_calc(time):
+    global end
+    await asyncio.sleep(time)
+    end = True
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Finding a good solution to the autosharing problem.")
@@ -85,16 +92,15 @@ if __name__ == "__main__":
 
     #Create initial solution
     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
-    best_cost = reqsol.cost
-    best_sol = reqsol
+    best_sol = reqsol.toModel()
     reqs_ints = range(0, len(pi.requests))
     cars_ints = range(0, pi.caramount)
     zone_ints = range(0, len(pi.zones))
     random.seed(argumentNamespace.random_seed)
-    while (time.perf_counter() - start_time) < argumentNamespace.time_limit_s:
-        if reqsol.cost < best_cost:
-            best_cost = reqsol.cost
-            best_sol = copy.deepcopy(reqsol)
+    asyncio.run(end_of_calc(argumentNamespace.time_limit_s))
+    while not end:
+        if reqsol.cost < best_sol.cost:
+            best_sol = reqsol.toModel()
         if not small_operator(reqsol, reqs_ints, cars_ints):
             big_operator(reqsol, reqs_ints, cars_ints)
     
