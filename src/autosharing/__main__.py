@@ -32,7 +32,6 @@ def create_initial_input(reqs: List[RequestStruct],
     for i, zone in enumerate(reqsol.car_to_zone):
         if zone < 0:
             reqsol.car_to_zone[i] = 0
-    print(reqsol.car_to_reqNumber)
     return reqsol
 
 
@@ -81,7 +80,6 @@ if __name__ == "__main__":
     parser.add_argument('thread_amount', type=int)
     argumentNamespace = parser.parse_args()
     # init seed
-    print(argumentNamespace.random_seed)
 
     #---------------Start of timing window---------------
     start_time = time.perf_counter()
@@ -111,5 +109,6 @@ if __name__ == "__main__":
     #----------------End of timing window----------------
 
     print(f"Elapsed time: {elapsed_time}s")
+    print(f"Solution cost: {best_sol.cost}")
     ProcessOutput(argumentNamespace.output_file, best_sol)
 
