@@ -7,7 +7,7 @@ import sys
 import time
 import argparse
 import random
-import asyncio
+from threading import Timer
 
 def create_initial_input(reqs: List[RequestStruct],
                          zones: List[ZoneStruct],
@@ -66,9 +66,8 @@ def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range):
 
 
 end = False
-async def end_of_calc(time):
+def end_of_calc():
     global end
-    await asyncio.sleep(time)
     end = True
 
 
@@ -97,7 +96,7 @@ if __name__ == "__main__":
     cars_ints = range(0, pi.caramount)
     zone_ints = range(0, len(pi.zones))
     random.seed(argumentNamespace.random_seed)
-    asyncio.run(end_of_calc(argumentNamespace.time_limit_s))
+    Timer(argumentNamespace.time_limit_s, end_of_calc).start()
     while not end:
         if reqsol.cost < best_sol.cost:
             best_sol = reqsol.toModel()
