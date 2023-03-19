@@ -3,7 +3,6 @@ from typing import List
 from autosharing.model import RequestStruct, Solution, ZoneStruct
 from autosharing.input import ProcessInput
 from autosharing.output import ProcessOutput
-import sys
 import time
 import argparse
 import random
@@ -86,29 +85,26 @@ if __name__ == "__main__":
 
     #Read input file and create model
     pi = ProcessInput(argumentNamespace.input_file)
-
     #Create initial solution
     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
+    initial_cost = reqsol.cost
     best_sol = reqsol.toModel()
     reqs_ints = range(0, len(pi.requests))
     cars_ints = range(0, pi.caramount)
     zone_ints = range(0, len(pi.zones))
     random.seed(argumentNamespace.random_seed)
     Timer(argumentNamespace.time_limit_s, end_of_calc).start()
+
     while not end:
         if reqsol.cost < best_sol.cost:
             best_sol = reqsol.toModel()
         if not small_operator(reqsol, reqs_ints, cars_ints):
             big_operator(reqsol, reqs_ints, cars_ints)
-    
-    if((time.perf_counter() - start_time) < argumentNamespace.time_limit_s):
-        #Find better solution
-        exit
 
     elapsed_time = time.perf_counter() - start_time
     #----------------End of timing window----------------
 
     print(f"Elapsed time: {elapsed_time}s")
-    print(f"Solution cost: {best_sol.cost}")
+    print(f"Cost improvement: {initial_cost} -> {best_sol.cost}")
     ProcessOutput(argumentNamespace.output_file, best_sol)
 
