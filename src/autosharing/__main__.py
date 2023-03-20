@@ -12,9 +12,9 @@ def create_initial_input(reqs: List[RequestStruct],
                          zones: List[ZoneStruct],
                          amount_cars: int) -> Solution:
     reqsol = Solution(len(reqs), amount_cars, reqs, zones)
-    for i, req in enumerate(reqs):
+    for i, req in enumerate(random.sample(reqs, len(reqs))):
         car: int
-        for car in req.cars:
+        for car in random.sample(list(req.cars), len(req.cars)):
             zone = reqsol.car_to_zone[car]
             if zone < 0:
                 new_zone = req.zone
@@ -120,7 +120,8 @@ if __name__ == "__main__":
 
     while not end:
         if not big_operator(reqsol, reqs_ints, cars_ints):
-            small_operator(reqsol, reqs_ints, cars_ints)
+            if not small_operator(reqsol, reqs_ints, cars_ints):
+                reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
         if reqsol.cost < best_sol.cost:
             best_sol = reqsol.toModel()
         # if not small_operator(reqsol, reqs_ints, cars_ints):
