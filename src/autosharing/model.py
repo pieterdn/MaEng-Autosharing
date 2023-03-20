@@ -6,6 +6,7 @@ import copy
 from dataclasses import dataclass
 
 MINUTES_IN_DAY = 1440
+NUM_OF_PEN = 3
 
 
 @dataclass
@@ -17,6 +18,18 @@ class SolutionModel:
     cost: int
 
 
+class TransactionReq(NamedTuple):
+    req: int
+    carFrom: int
+    carTo: int
+    costFrom: int
+    costTo: int
+
+class TransactionCar(NamedTuple):
+    car: int
+    zoneFrom: int
+    zoneTo: int
+
 class Solution:
     req_to_car: npt.NDArray[np.int16]           # Give req as index get car
     req_to_car_bools: npt.NDArray[np.bool_]     # 2D bool array: a row with len = #cars for every request
@@ -27,6 +40,8 @@ class Solution:
     zones: List[ZoneStruct]                     # List of zones
     cost_per_req: npt.NDArray[np.int16]         # Give req as index get cost
     cost: int
+    in_trans: bool
+    transaction: List[TransactionReq | TransactionCar]
 
     def __init__(self, num_reqs: int,
                  num_cars: int,
@@ -41,10 +56,34 @@ class Solution:
         self.req_to_car_bools = np.zeros((num_reqs, num_cars), dtype=np.bool_)
         self.car_to_zone_bools = np.zeros((len(zones), num_cars), dtype=np.bool_)
         self.car_to_zone = np.full(num_cars, -1, dtype=np.int16)
+        self.req_to_pen = np.full((NUM_OF_PEN, num_reqs), 1, dtype=np.int16)
         self.reqs = reqs
         self.zones = zones
         self.car_to_reqNumber = [set() for _ in range(num_cars)]
+        self.in_trans = False
+        self.transaction = []
 
+    def startTransaction(self):
+        self.in_trans = True
+
+    def rollback(self):
+        self.in_trans = False
+        for trans in reversed(self.transaction):
+            if isinstance(trans, TransactionReq):
+                self.req_to_car[trans.req] = trans.carFrom
+                if trans.carTo >= 0:
+                    self.req_to_car_bools[trans.req][trans.carTo] = False
+                    self.car_to_reqNumber[trans.carTo].remove(trans.req)
+                if trans.carFrom >= 0:
+                    self.req_to_car_bools[trans.req][trans.carFrom] = True
+                    self.car_to_reqNumber[trans.carFrom].add(trans.req)
+                self.cost_per_req[trans.req] = trans.costFrom
+                self.cost += trans.costFrom - trans.costTo
+            else:
+                self.car_to_zone[trans.car] = trans.zoneFrom
+                self.car_to_zone_bools[trans.zoneTo][trans.car] = False
+                self.car_to_zone_bools[trans.zoneFrom][trans.car] = True
+        self.transaction = []
 
     def toModel(self) -> SolutionModel:
         return SolutionModel(
@@ -107,11 +146,39 @@ class Solution:
             # req_struct = self.reqs[req]
             new_cost, feasible = self.costAndFeasibleZone(req, zone)
             if feasible:
+                if self.in_trans:
+                    self.transaction.append(
+                        TransactionReq(
+                            req,
+                            car,
+                            car,
+                            self.cost_per_req[req],
+                            new_cost
+                        )
+                    )
                 self.changeCost(req, new_cost)
             else:
+                if self.in_trans:
+                    self.transaction.append(
+                        TransactionReq(
+                            req,
+                            car,
+                            -1,
+                            self.cost_per_req[req],
+                            new_cost
+                        )
+                    )
                 lst.append(req)
                 self.changeCost(req, new_cost)
                 self.carHardChange(req, -1)
+        if self.in_trans:
+            self.transaction.append(
+                TransactionCar(
+                    car,
+                    self.car_to_zone[car],
+                    zone
+                )
+            )
         self.zoneHardChange(car, zone)
         return lst
 
@@ -130,6 +197,16 @@ class Solution:
 
     def addCarToReq(self, req: int, car: int):
         new_cost = self.costOfCar(req, car)[0]
+        if self.in_trans:
+            self.transaction.append(
+                TransactionReq(
+                    req,
+                    self.req_to_car[req],
+                    car,
+                    self.cost_per_req[req],
+                    new_cost
+                )
+            )
         self.carHardChange(req, car)
         self.changeCost(req, new_cost)
 
