@@ -1,11 +1,12 @@
 from __future__ import annotations
-from typing import List
+from typing import List, Tuple
 from autosharing.model import RequestStruct, Solution, ZoneStruct
 from autosharing.input import ProcessInput
 from autosharing.output import ProcessOutput
 import time
 import argparse
 import random
+import copy
 from threading import Timer
 
 def create_initial_input(reqs: List[RequestStruct],
@@ -13,6 +14,7 @@ def create_initial_input(reqs: List[RequestStruct],
                          amount_cars: int) -> Solution:
     reqsol = Solution(len(reqs), amount_cars, reqs, zones)
     for i, req in enumerate(reqs):
+        car: int
         for car in req.cars:
             zone = reqsol.car_to_zone[car]
             if zone < 0:
@@ -49,18 +51,49 @@ def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool
             return True
     return False
 
-def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range):
-    rand_car = random.randrange(cars_int[0], cars_int[-1])
-    rand_zone = random.randrange(0, len(reqsol.zones) - 1)
-    lost_before = [i for i, car in enumerate(reqsol.req_to_car) if car < 0]
-    lost = reqsol.changeCarZone(rand_car, rand_zone)
+def small_operator_v2(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool:
+    rand_reqs = random.sample(reqs_ints, k=len(reqs_ints))
+    rand_cars = random.sample(cars_ints, k=len(cars_ints))
+    # loop only over cars in feasible zone not all
+    for req in rand_reqs:
+        for car in rand_cars:
+            if not reqsol.feasibleCarToReq(req, car):
+                continue
+            new_cost = reqsol.newCost(req, car)
+            if new_cost >= reqsol.cost:
+                continue
+            reqsol.addCarToReq(req, car)
+            return True
+    return False
+
+def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range) -> bool:
+    rand_zones = random.sample(range(0, len(reqsol.zones)), k=len(reqsol.zones))
+    rand_cars = random.sample(cars_ints, k=len(cars_ints))
+    new_reqsol = copy.deepcopy(reqsol)
+    # car, zone, cost
+    best: Tuple[int, int, int] | None = None
+    for rand_car in rand_cars:
+        for rand_zone in rand_zones:
+            big_op(new_reqsol, cars_int, rand_car, rand_zone)
+            if best is None or new_reqsol.cost < best[2]:
+                best = (rand_car, rand_zone, new_reqsol.cost)
+    if best is None:
+        return False
+    # print(reqsol.cost)
+    big_op(reqsol, cars_int, best[0], best[1])
+    # print(reqsol.cost)
+    return True
+
+def big_op(new_reqsol: Solution, cars_int: range, rand_car: int, rand_zone: int):
+    lost_before = [i for i, car in enumerate(new_reqsol.req_to_car) if car < 0]
+    lost = new_reqsol.changeCarZone(rand_car, rand_zone)
     for req in lost_before:
-        if reqsol.feasibleCarToReq(req, rand_car):
-            reqsol.addCarToReq(req, rand_car)
+        if new_reqsol.feasibleCarToReq(req, rand_car):
+            new_reqsol.addCarToReq(req, rand_car)
     for req in lost:
         for car in cars_int:
-            if reqsol.feasibleCarToReq(req, car):
-                reqsol.addCarToReq(req, car)
+            if new_reqsol.feasibleCarToReq(req, car):
+                new_reqsol.addCarToReq(req, car)
 
 
 end = False
