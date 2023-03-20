@@ -6,7 +6,6 @@ from autosharing.output import ProcessOutput
 import time
 import argparse
 import random
-import copy
 from threading import Timer
 
 def create_initial_input(reqs: List[RequestStruct],
@@ -61,15 +60,14 @@ def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range) -> bool:
     best: Tuple[int, int, int] | None = None
     for rand_car in rand_cars:
         for rand_zone in rand_zones:
-            new_reqsol = copy.deepcopy(reqsol)
-            big_op(new_reqsol, cars_int, rand_car, rand_zone)
-            if best is None or new_reqsol.cost < best[2]:
-                best = (rand_car, rand_zone, new_reqsol.cost)
+            reqsol.startTransaction()
+            big_op(reqsol, cars_int, rand_car, rand_zone)
+            if best is None or reqsol.cost < best[2]:
+                best = (rand_car, rand_zone, reqsol.cost)
+            reqsol.rollback()
     if best is None or best[2] >= reqsol.cost:
         return False
-    # print(reqsol.cost)
     big_op(reqsol, cars_int, best[0], best[1])
-    # print(reqsol.cost)
     return True
 
 def big_op(new_reqsol: Solution, cars_int: range, rand_car: int, rand_zone: int):
