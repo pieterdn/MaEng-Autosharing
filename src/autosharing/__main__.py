@@ -12,7 +12,7 @@ def create_initial_input(reqs: List[RequestStruct],
                          zones: List[ZoneStruct],
                          amount_cars: int) -> Solution:
     reqsol = Solution(len(reqs), amount_cars, reqs, zones)
-    for i, req in enumerate(random.sample(reqs, len(reqs))):
+    for i, req in random.sample(list(enumerate(reqs)), len(reqs)):
         car: int
         for car in random.sample(list(req.cars), len(req.cars)):
             zone = reqsol.car_to_zone[car]
