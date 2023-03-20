@@ -131,4 +131,3 @@ if __name__ == "__main__":
     print(f"Elapsed time: {elapsed_time}s")
     print(f"Cost improvement: {initial_cost} -> {best_sol.cost}")
     ProcessOutput(argumentNamespace.output_file, best_sol)
-
