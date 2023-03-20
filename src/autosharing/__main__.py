@@ -36,7 +36,7 @@ def create_initial_input(reqs: List[RequestStruct],
 
 
 def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool:
-    print(f"Small operator incoming cost: {reqsol.cost}")
+    #print(f"Small operator incoming cost: {reqsol.cost}")
     rand_reqs = random.sample(reqs_ints, k=len(reqs_ints))
     rand_cars = random.sample(cars_ints, k=len(cars_ints))
     # req, car, cost
@@ -50,14 +50,14 @@ def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool
             if best is None or new_cost < best[2]:
                 best = (req, car, new_cost)
     if best is None or best[2] >= reqsol.cost:
-        print(f"    Small operator failed improvement: {reqsol.cost}")
+        #print(f"    Small operator failed improvement: {reqsol.cost}")
         return False
     reqsol.addCarToReq(best[0], best[1])
-    print(f"    Small operator succeeded improvement: {reqsol.cost}")
+    #print(f"    Small operator succeeded improvement: {reqsol.cost}")
     return True
 
 def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range) -> bool:
-    print(f"Big operator incoming cost: {reqsol.cost}")
+    #print(f"Big operator incoming cost: {reqsol.cost}")
     rand_zones = random.sample(range(0, len(reqsol.zones)), k=len(reqsol.zones))
     rand_cars = random.sample(cars_ints, k=len(cars_ints))
     old_cost = reqsol.cost
@@ -67,10 +67,10 @@ def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range) -> bool:
             big_op(reqsol, cars_int, rand_car, rand_zone)
             if reqsol.cost < old_cost:
                 reqsol.commit()
-                print(f"    Big operator succeeded improvement: {reqsol.cost}")
+                #print(f"    Big operator succeeded improvement: {reqsol.cost}")
                 return True
             reqsol.rollback()
-    print(f"    Big operator failed improvement: {reqsol.cost}")
+    #print(f"    Big operator failed improvement: {reqsol.cost}")
     return False
 
 def big_op(new_reqsol: Solution, cars_int: range, rand_car: int, rand_zone: int):
@@ -129,7 +129,10 @@ if __name__ == "__main__":
                     once = False
                 else:
                     once = True
+                    print(f"    Cost improvement: {initial_cost} -> {reqsol.cost}")
                     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
+                    initial_cost = reqsol.cost
+                    #ProcessOutput(argumentNamespace.output_file, best_sol)
             else:
                 for i in range(0, 5):
                     if not small_operator(reqsol, reqs_ints, cars_ints):
@@ -140,6 +143,7 @@ if __name__ == "__main__":
             # if not small_operator(reqsol, reqs_ints, cars_ints):
             #     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
         if reqsol.cost < best_sol.cost:
+            initial_best = initial_cost
             best_sol = reqsol.toModel()
         # if not small_operator(reqsol, reqs_ints, cars_ints):
         #     big_operator(reqsol, reqs_ints, cars_ints)
@@ -148,5 +152,5 @@ if __name__ == "__main__":
     #----------------End of timing window----------------
 
     print(f"Elapsed time: {elapsed_time}s")
-    print(f"Cost improvement: {initial_cost} -> {best_sol.cost}")
+    print(f"Cost improvement: {initial_best} -> {best_sol.cost}")
     ProcessOutput(argumentNamespace.output_file, best_sol)
