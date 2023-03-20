@@ -118,10 +118,27 @@ if __name__ == "__main__":
     start_time = time.perf_counter()
     Timer(argumentNamespace.time_limit_s, end_of_calc).start()
 
+    once = True
+    count = 0
     while not end:
         if not big_operator(reqsol, reqs_ints, cars_ints):
-            if not small_operator(reqsol, reqs_ints, cars_ints):
-                reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
+            if count > 1:
+                while small_operator(reqsol, reqs_ints, cars_ints):
+                    pass
+                if once:
+                    once = False
+                else:
+                    once = True
+                    reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
+            else:
+                for i in range(0, 5):
+                    if not small_operator(reqsol, reqs_ints, cars_ints):
+                        break
+            count += 1
+        else:
+            count = 0
+            # if not small_operator(reqsol, reqs_ints, cars_ints):
+            #     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
         if reqsol.cost < best_sol.cost:
             best_sol = reqsol.toModel()
         # if not small_operator(reqsol, reqs_ints, cars_ints):
