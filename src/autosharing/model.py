@@ -66,6 +66,10 @@ class Solution:
     def startTransaction(self):
         self.in_trans = True
 
+    def commit(self):
+        self.in_trans = True
+        self.transaction = []
+
     def rollback(self):
         self.in_trans = False
         for trans in reversed(self.transaction):

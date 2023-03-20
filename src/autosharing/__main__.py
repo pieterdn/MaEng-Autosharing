@@ -60,22 +60,18 @@ def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range) -> bool:
     print(f"Big operator incoming cost: {reqsol.cost}")
     rand_zones = random.sample(range(0, len(reqsol.zones)), k=len(reqsol.zones))
     rand_cars = random.sample(cars_ints, k=len(cars_ints))
-    # car, zone, cost
-    best: Tuple[int, int, int] | None = None
+    old_cost = reqsol.cost
     for rand_car in rand_cars:
         for rand_zone in rand_zones:
             reqsol.startTransaction()
             big_op(reqsol, cars_int, rand_car, rand_zone)
-            if best is None or reqsol.cost < best[2]:
-                best = (rand_car, rand_zone, reqsol.cost)
+            if reqsol.cost < old_cost:
+                reqsol.commit()
+                print(f"    Big operator succeeded improvement: {reqsol.cost}")
+                return True
             reqsol.rollback()
-    if best is None or best[2] >= reqsol.cost:
-        print(f"    Big operator failed improvement: {reqsol.cost}")
-        return False
-    big_op(reqsol, cars_int, best[0], best[1])
-    # print(reqsol.cost)
-    print(f"    Big operator succeeded improvement: {reqsol.cost}")
-    return True
+    print(f"    Big operator failed improvement: {reqsol.cost}")
+    return False
 
 def big_op(new_reqsol: Solution, cars_int: range, rand_car: int, rand_zone: int):
     lost_before = [i for i, car in enumerate(new_reqsol.req_to_car) if car < 0]
