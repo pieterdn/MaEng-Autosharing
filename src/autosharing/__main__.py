@@ -39,45 +39,33 @@ def create_initial_input(reqs: List[RequestStruct],
 def small_operator(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool:
     rand_reqs = random.sample(reqs_ints, k=len(reqs_ints))
     rand_cars = random.sample(cars_ints, k=len(cars_ints))
+    # req, car, cost
+    best: Tuple[int, int, int] | None = None
     # loop only over cars in feasible zone not all
     for req in rand_reqs:
         for car in rand_cars:
             if not reqsol.feasibleCarToReq(req, car):
                 continue
             new_cost = reqsol.newCost(req, car)
-            if new_cost >= reqsol.cost:
-                continue
-            reqsol.addCarToReq(req, car)
-            return True
-    return False
-
-def small_operator_v2(reqsol: Solution, reqs_ints: range, cars_ints: range) -> bool:
-    rand_reqs = random.sample(reqs_ints, k=len(reqs_ints))
-    rand_cars = random.sample(cars_ints, k=len(cars_ints))
-    # loop only over cars in feasible zone not all
-    for req in rand_reqs:
-        for car in rand_cars:
-            if not reqsol.feasibleCarToReq(req, car):
-                continue
-            new_cost = reqsol.newCost(req, car)
-            if new_cost >= reqsol.cost:
-                continue
-            reqsol.addCarToReq(req, car)
-            return True
-    return False
+            if best is None or new_cost < best[2]:
+                best = (req, car, new_cost)
+    if best is None or best[2] > reqsol.cost:
+        return False
+    reqsol.addCarToReq(best[0], best[1])
+    return True
 
 def big_operator(reqsol: Solution, reqs_ints: range, cars_int: range) -> bool:
     rand_zones = random.sample(range(0, len(reqsol.zones)), k=len(reqsol.zones))
     rand_cars = random.sample(cars_ints, k=len(cars_ints))
-    new_reqsol = copy.deepcopy(reqsol)
     # car, zone, cost
     best: Tuple[int, int, int] | None = None
     for rand_car in rand_cars:
         for rand_zone in rand_zones:
+            new_reqsol = copy.deepcopy(reqsol)
             big_op(new_reqsol, cars_int, rand_car, rand_zone)
             if best is None or new_reqsol.cost < best[2]:
                 best = (rand_car, rand_zone, new_reqsol.cost)
-    if best is None:
+    if best is None or best[2] >= reqsol.cost:
         return False
     # print(reqsol.cost)
     big_op(reqsol, cars_int, best[0], best[1])
@@ -113,8 +101,6 @@ if __name__ == "__main__":
     argumentNamespace = parser.parse_args()
     # init seed
 
-    #---------------Start of timing window---------------
-    start_time = time.perf_counter()
 
     #Read input file and create model
     pi = ProcessInput(argumentNamespace.input_file)
@@ -126,13 +112,18 @@ if __name__ == "__main__":
     cars_ints = range(0, pi.caramount)
     zone_ints = range(0, len(pi.zones))
     random.seed(argumentNamespace.random_seed)
+
+    #---------------Start of timing window---------------
+    start_time = time.perf_counter()
     Timer(argumentNamespace.time_limit_s, end_of_calc).start()
 
     while not end:
         if reqsol.cost < best_sol.cost:
             best_sol = reqsol.toModel()
-        if not small_operator(reqsol, reqs_ints, cars_ints):
-            big_operator(reqsol, reqs_ints, cars_ints)
+        if not big_operator(reqsol, reqs_ints, cars_ints):
+            small_operator(reqsol, reqs_ints, cars_ints)
+        # if not small_operator(reqsol, reqs_ints, cars_ints):
+        #     big_operator(reqsol, reqs_ints, cars_ints)
 
     elapsed_time = time.perf_counter() - start_time
     #----------------End of timing window----------------
