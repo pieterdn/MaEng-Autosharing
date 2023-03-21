@@ -6,7 +6,9 @@ from autosharing.output import ProcessOutput
 import time
 import argparse
 import random
+import copy
 from threading import Timer
+from multiprocessing import Process, Pool
 
 def create_initial_input(reqs: List[RequestStruct],
                          zones: List[ZoneStruct],
@@ -90,6 +92,42 @@ def end_of_calc():
     global end
     end = True
 
+def worker_process(pi: ProcessInput, process_id: int, start_time, time_limit):
+    #create initial solution
+    print(f"Worker process {process_id} started with args: {start_time} {time_limit}")
+    reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
+    initial_cost = reqsol.cost
+    best_sol = reqsol.toModel()
+
+    once = True
+    count = 0
+    while (time.perf_counter() - start_time < time_limit):
+        if not big_operator(reqsol, reqs_ints, cars_ints):
+            if count > 1:
+                while small_operator(reqsol, reqs_ints, cars_ints):
+                    pass
+                if once:
+                    once = False
+                else:
+                    once = True
+                    print(f"    Cost improvement by process {process_id}: {initial_cost} -> {reqsol.cost}")
+                    reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
+                    initial_cost = reqsol.cost
+                    #ProcessOutput(argumentNamespace.output_file, best_sol)
+            else:
+                for i in range(0, 5):
+                    if not small_operator(reqsol, reqs_ints, cars_ints):
+                        break
+            count += 1
+        else:
+            count = 0
+
+        if reqsol.cost < best_sol.cost:
+            initial_best = initial_cost
+            best_sol = reqsol.toModel()
+
+    print(f"Cost improvement by process {process_id}: {initial_best} -> {best_sol.cost}")
+    return best_sol
 
 if __name__ == "__main__":
 
@@ -101,56 +139,32 @@ if __name__ == "__main__":
     parser.add_argument('thread_amount', type=int)
     argumentNamespace = parser.parse_args()
     # init seed
+    random.seed(argumentNamespace.random_seed)
 
-
-    #Read input file and create model
+    #Read input
     pi = ProcessInput(argumentNamespace.input_file)
-    #Create initial solution
-    reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
-    initial_cost = reqsol.cost
-    best_sol = reqsol.toModel()
     reqs_ints = range(0, len(pi.requests))
     cars_ints = range(0, pi.caramount)
     zone_ints = range(0, len(pi.zones))
-    random.seed(argumentNamespace.random_seed)
 
     #---------------Start of timing window---------------
-    start_time = time.perf_counter()
+    
     Timer(argumentNamespace.time_limit_s, end_of_calc).start()
 
-    once = True
-    count = 0
-    while not end:
-        if not big_operator(reqsol, reqs_ints, cars_ints):
-            if count > 1:
-                while small_operator(reqsol, reqs_ints, cars_ints):
-                    pass
-                if once:
-                    once = False
-                else:
-                    once = True
-                    print(f"    Cost improvement: {initial_cost} -> {reqsol.cost}")
-                    reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
-                    initial_cost = reqsol.cost
-                    #ProcessOutput(argumentNamespace.output_file, best_sol)
-            else:
-                for i in range(0, 5):
-                    if not small_operator(reqsol, reqs_ints, cars_ints):
-                        break
-            count += 1
-        else:
-            count = 0
-            # if not small_operator(reqsol, reqs_ints, cars_ints):
-            #     reqsol = create_initial_input(pi.requests, pi.zones, pi.caramount)
-        if reqsol.cost < best_sol.cost:
-            initial_best = initial_cost
-            best_sol = reqsol.toModel()
-        # if not small_operator(reqsol, reqs_ints, cars_ints):
-        #     big_operator(reqsol, reqs_ints, cars_ints)
+    start_time = time.perf_counter()
+    #Multiprocessing setup
+    with Pool(processes = argumentNamespace.thread_amount) as pool:
+        possible_sols = pool.starmap(worker_process, [(pi, i, start_time, argumentNamespace.time_limit_s) for i in range(0, argumentNamespace.thread_amount)])
+        high_cost = 150000
+        best_worker = -1
+        for i in range(len(possible_sols)):
+            if possible_sols[i].cost < high_cost:
+                best_sol = possible_sols[i]
+                high_cost = possible_sols[i].cost
+                best_worker = i
 
-    elapsed_time = time.perf_counter() - start_time
     #----------------End of timing window----------------
 
-    print(f"Elapsed time: {elapsed_time}s")
-    print(f"Cost improvement: {initial_best} -> {best_sol.cost}")
+    print(f"Elapsed time: {time.perf_counter() - start_time}s")
+    print(f"Solution found by worker {best_worker} has best cost: {best_sol.cost}")
     ProcessOutput(argumentNamespace.output_file, best_sol)
