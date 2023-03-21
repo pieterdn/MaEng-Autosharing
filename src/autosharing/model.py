@@ -67,7 +67,7 @@ class Solution:
         self.in_trans = True
 
     def commit(self):
-        self.in_trans = True
+        self.in_trans = False
         self.transaction = []
 
     def rollback(self):
