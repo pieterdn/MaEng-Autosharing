@@ -248,9 +248,12 @@ impl<'a> Solution<'a> {
 
     fn change_car_zone(&mut self, car: i64, zone: i64) -> Vec<i64> {
         let mut lost_items: Vec<i64> = Vec::new();
-        let car_to_req_number: *const HashSet<_> = &self.car_to_req_number[car as usize];
+        let mut reqs = Vec::with_capacity(self.car_to_req_number[car as usize].len());
+        for &req in &self.car_to_req_number[car as usize] {
+            reqs.push(req);
+        }
         // make sure self.car_to_req_number does not get changed in for
-        for &req in unsafe{ (*car_to_req_number).iter() } {
+        for req in reqs {
             let (new_cost, feasible) = self.cost_and_feasible_zone(req, zone);
             if feasible {
                 if self.in_trans {
