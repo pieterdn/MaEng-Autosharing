@@ -11,6 +11,7 @@ use crate::output::ouput_solution;
 use std::fs::File;
 use std::io::prelude::*;
 use std::env;
+use rand::Rng;
 use rand::seq::{
     IteratorRandom, SliceRandom
 };
@@ -20,6 +21,14 @@ use tokio::time::{
     Duration
 };
 use std::time::Instant;
+use std::cmp::{PartialEq, Eq};
+
+#[derive(Debug, PartialEq, Eq)]
+enum OperatorOut {
+    Improve,
+    Fail,
+    Increase
+}
 
 fn create_initial_input<'a>(reqs: &'a Vec<Request>,
                         zones: &'a Vec<Zone>,
@@ -57,10 +66,19 @@ fn create_initial_input<'a>(reqs: &'a Vec<Request>,
     return reqsol;
 }
 
+fn activation_fnc(dif: i64, temp: f64, rng: &mut rand::rngs::StdRng) -> bool {
+    if dif <= 0 {
+        return false;
+    }
+    let chance = f64::exp(-dif as f64/temp);
+    return rng.gen_bool(chance);
+}
+
 fn small_operator(reqsol: &mut Solution,
                   req_ints: &mut Vec<i64>,
                   cars_ints: &mut Vec<i64>,
-                  rng: &mut rand::rngs::StdRng) -> bool {
+                  rng: &mut rand::rngs::StdRng,
+                  temp: f64) -> OperatorOut {
     req_ints.shuffle(rng);
     cars_ints.shuffle(rng);
     // req, car, cost
@@ -74,21 +92,30 @@ fn small_operator(reqsol: &mut Solution,
             }
         }
     }
-    if best == None || best.unwrap().2 >= reqsol.cost {
+    if best == None {
         // println!("\tSmall operator failed improvement: {:}", reqsol.cost);
-        return false;
+        return OperatorOut::Fail;
+    } else if activation_fnc(best.unwrap().2 - reqsol.cost, temp, rng) {
+        let best = best.unwrap();
+        reqsol.add_car_to_req(best.0, best.1);
+        // println!("\tSmall operator succeeded increase: {:}", reqsol.cost);
+        return OperatorOut::Increase;
+    } else if best.unwrap().2 <= reqsol.cost {
+        // println!("\tSmall operator failed improvement: {:}", reqsol.cost);
+        return OperatorOut::Fail;
     }
 
     let best = best.unwrap();
     reqsol.add_car_to_req(best.0, best.1);
     // println!("\tSmall operator succeeded improvement: {:}", reqsol.cost);
-    return true;
+    return OperatorOut::Improve;
 }
 
 fn big_operator(reqsol: &mut Solution,
                 zone_ints: &mut Vec<i64>,
                 cars_ints: &mut Vec<i64>,
-                rng: &mut rand::rngs::StdRng) -> bool {
+                rng: &mut rand::rngs::StdRng,
+                temp: f64) -> OperatorOut {
     zone_ints.shuffle(rng);
     cars_ints.shuffle(rng);
     let old_cost = reqsol.cost;
@@ -99,13 +126,17 @@ fn big_operator(reqsol: &mut Solution,
             if reqsol.cost < old_cost {
                 reqsol.commit();
                 // println!("\tBig operator succeeded improvement: {:}", reqsol.cost);
-                return true;
+                return OperatorOut::Improve;
+            } else if activation_fnc(reqsol.cost - old_cost, temp, rng) {
+                reqsol.commit();
+                // println!("\tBig operator succeeded increase: {:}", reqsol.cost);
+                return OperatorOut::Increase;
             }
             reqsol.rollback();
         }
     }
     // println!("\tBig operator failed improvement: {:}", reqsol.cost);
-    return false;
+    return OperatorOut::Fail;
 }
 
 fn big_op(reqsol: &mut Solution,
@@ -159,31 +190,54 @@ async fn main() -> Result<(), String>{
     let mut once = false;
     let mut initial_cost = reqsol.cost;
     let mut initial_best = reqsol.cost;
+    const BEGIN_TEMP: f64 = 300.0;
+    const MIN_TEMP: f64 = 5.0;
+    let mut temp = BEGIN_TEMP;
+    const BIG_FAIL: i32 = 5;
+    let mut big_prev = OperatorOut::Improve;
     while !join.is_finished(){
-        if !big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng) {
+        let big_out = big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, temp*count as f64);
+        if big_out == OperatorOut::Fail || (big_out == OperatorOut::Improve && big_prev == OperatorOut::Increase && temp < MIN_TEMP*2.0){
+            if big_out == OperatorOut::Improve && big_prev == OperatorOut::Increase {
+                for _ in 0..5 {
+                    big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, 2.0*temp*count as f64);
+                    small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, 2.0*temp*count as f64);
+                }
+            }
             if count > 1 {
-                while small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng) {}
+                loop {
+                    let small_out = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp*count as f64);
+                    if small_out == OperatorOut::Fail { break; }
+                }
                 if once {
                     once = false;
-                } else {
+                } else if temp < MIN_TEMP {
                     once = true;
-                    // println!("\tCost improvement: {:} -> {:}", initial_cost, reqsol.cost);
+                    println!("\tCost improvement: {:} -> {:}", initial_cost, best_sol.cost);
                     reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
+                    temp = BEGIN_TEMP;
                     initial_cost = reqsol.cost;
                 } 
             } else {
                 for _ in 0..5 {
-                    if !small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng) {
+                    let small_out = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp);
+                    if small_out == OperatorOut::Fail {
                         break;
                     }
                 }
             }
             count += 1;
+        } else if big_out == OperatorOut::Improve && big_prev != OperatorOut::Improve{
+            count = 0;
         }
         if reqsol.cost < best_sol.cost {
             initial_best = initial_cost;
             best_sol = reqsol.to_model();
         }
+        if temp > MIN_TEMP {
+            temp *= 0.99980;
+        }
+        big_prev = big_out;
     }
     let duration = start.elapsed();
     println!("Elapsed time: {:?}", duration);
