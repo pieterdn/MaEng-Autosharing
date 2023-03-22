@@ -40,26 +40,26 @@ enum Transaction {
 
 #[derive(Debug)]
 pub struct Solution<'a> {
-    req_to_car: Vec<i64>,
-    req_to_car_bools: Vec<Vec<bool>>,
-    car_to_req_number: Vec<HashSet<i64>>,
-    car_to_zone_bools: Vec<Vec<bool>>,
-    car_to_zone: Vec<i64>,
-    reqs: &'a Vec<Request>,
-    zones: &'a Vec<Zone>,
-    cost_per_req: Vec<i64>,
-    cost: i64,
+    pub req_to_car: Vec<i64>,
+    pub req_to_car_bools: Vec<Vec<bool>>,
+    pub car_to_req_number: Vec<HashSet<i64>>,
+    pub car_to_zone_bools: Vec<Vec<bool>>,
+    pub car_to_zone: Vec<i64>,
+    pub reqs: &'a Vec<Request>,
+    pub zones: &'a Vec<Zone>,
+    pub cost_per_req: Vec<i64>,
+    pub cost: i64,
     in_trans: bool,
     transaction: Vec<Transaction>
 }
 
 impl<'a> Solution<'a> {
-    fn new(num_reqs: i64,
+    pub fn new(num_reqs: i64,
            num_cars: i64,
            reqs: &'a Vec<Request>,
            zones: &'a Vec<Zone>) -> Solution<'a> {
         let mut cost = 0;
-        let mut cost_per_req = Vec::with_capacity(num_cars as usize);
+        let mut cost_per_req = vec![0; num_reqs as usize];
         for (i, req) in reqs.iter().enumerate() {
             cost_per_req[i] = req.pen1;
             cost += req.pen1;
@@ -79,16 +79,16 @@ impl<'a> Solution<'a> {
         }
     }
 
-    fn start_transaction(&mut self) {
+    pub fn start_transaction(&mut self) {
         self.in_trans = true;
     }
 
-    fn commit(&mut self) {
+    pub fn commit(&mut self) {
         self.in_trans = false;
         self.transaction.clear();
     }
 
-    fn rollback(&mut self) {
+    pub fn rollback(&mut self) {
         self.in_trans = false;
         for trans in self.transaction.iter().rev() {
             match trans {
@@ -128,7 +128,7 @@ impl<'a> Solution<'a> {
         self.transaction.clear();
     }
 
-    fn to_model(&self) -> SolutionModel<'a> {
+    pub fn to_model(&self) -> SolutionModel<'a> {
         SolutionModel {
             req_to_car: self.req_to_car.to_vec(),
             car_to_zone: self.car_to_zone.to_vec(),
@@ -138,7 +138,7 @@ impl<'a> Solution<'a> {
         }
     }
 
-    fn cost_and_feasible_zone(&self, req: i64, zone: i64) -> (i64, bool) {
+    pub fn cost_and_feasible_zone(&self, req: i64, zone: i64) -> (i64, bool) {
         let req_struct = &self.reqs[req as usize];
         if self.zones[zone as usize].zonerel[req_struct.zone as usize] {
             return (req_struct.pen2, true);
@@ -148,7 +148,7 @@ impl<'a> Solution<'a> {
         return (req_struct.pen1, false);
     }
 
-    fn feasible_car_to_req(&self, req: i64, car: i64) -> bool {
+    pub fn feasible_car_to_req(&self, req: i64, car: i64) -> bool {
         let zone = self.car_to_zone[car as usize];
         if zone < 0 {
             return false;
@@ -179,29 +179,32 @@ impl<'a> Solution<'a> {
         return true;
     }
 
-    fn cost_of_car(&self, req: i64, car: i64) -> (i64, bool) {
+    pub fn cost_of_car(&self, req: i64, car: i64) -> (i64, bool) {
         let zone_car = self.car_to_zone[car as usize];
         return self.cost_and_feasible_zone(req, zone_car)
     }
 
-    fn change_cost(&mut self, req: i64, new_cost: i64) {
+    pub fn change_cost(&mut self, req: i64, new_cost: i64) {
         let old_cost = self.cost_per_req[req as usize];
         self.cost_per_req[req as usize] = new_cost;
         self.cost += new_cost - old_cost;
     }
 
-    fn new_cost(&self, req: i64, car: i64) -> i64 {
+    pub fn new_cost(&self, req: i64, car: i64) -> i64 {
         let (new_cost, _) = self.cost_of_car(req, car);
         let old_cost = self.cost_per_req[req as usize];
         return self.cost + new_cost - old_cost;
     }
 
-    fn zone_hard_change(&mut self, car: i64, zone: i64) {
+    pub fn zone_hard_change(&mut self, car: i64, zone: i64) {
         let old_zone = self.car_to_zone[car as usize];
-        self.car_to_zone_bools
-            [old_zone as usize]
-            [car as usize]
-                = false;
+        // println!("{:?} {:?}", car, old_zone);
+        if old_zone >= 0 {
+            self.car_to_zone_bools
+                [old_zone as usize]
+                [car as usize]
+                    = false;
+        }
         if zone >= 0 {
             self.car_to_zone[car as usize] = zone;
             self.car_to_zone_bools
@@ -211,8 +214,9 @@ impl<'a> Solution<'a> {
         }
     }
 
-    fn car_hard_change(&mut self, req: i64, car: i64) {
+    pub fn car_hard_change(&mut self, req: i64, car: i64) {
         let old_car = self.req_to_car[req as usize];
+        self.req_to_car[req as usize] = car;
         if old_car >= 0 {
             self.req_to_car_bools
                 [req as usize]
@@ -223,13 +227,13 @@ impl<'a> Solution<'a> {
         if car >= 0 {
             self.req_to_car_bools
                 [req as usize]
-                [old_car as usize]
+                [car as usize]
                     = true;
             self.car_to_req_number[car as usize].insert(req);
         }
     }
 
-    fn add_car_to_req(&mut self, req: i64, car: i64) {
+    pub fn add_car_to_req(&mut self, req: i64, car: i64) {
         let (new_cost, _) = self.cost_of_car(req, car);
         if self.in_trans {
             self.transaction.push(
@@ -246,7 +250,7 @@ impl<'a> Solution<'a> {
         self.change_cost(req, new_cost);
     }
 
-    fn change_car_zone(&mut self, car: i64, zone: i64) -> Vec<i64> {
+    pub fn change_car_zone(&mut self, car: i64, zone: i64) -> Vec<i64> {
         let mut lost_items: Vec<i64> = Vec::new();
         let mut reqs = Vec::with_capacity(self.car_to_req_number[car as usize].len());
         for &req in &self.car_to_req_number[car as usize] {
@@ -292,8 +296,8 @@ impl<'a> Solution<'a> {
                         Transaction::Car(
                             TransactionCar {
                                 car,
-                                zone_from: zone,
-                                zone_to: self.car_to_zone[car as usize],
+                                zone_from: self.car_to_zone[car as usize],
+                                zone_to: zone,
                             })
                         );
         }
@@ -304,6 +308,7 @@ impl<'a> Solution<'a> {
 
 #[derive(Debug)]
 pub struct Request {
+    pub req: i64,
     pub zone: i64,
     pub day: i64,
     pub start: i64,
@@ -315,6 +320,7 @@ pub struct Request {
 
 #[derive(Debug)]
 pub struct Zone {
+    pub zone: i64,
     pub zonerel: Vec<bool>,
     pub nextto: Vec<i64>,
 }

@@ -1,7 +1,7 @@
 use crate::model::SolutionModel;
 use std::fs;
 
-fn ouput_solution(output_file: String,
+pub fn ouput_solution(output_file: String,
                   solution: SolutionModel) -> Result<(), String> {
     let mut output = String::new();
     let cost = solution.cost;
@@ -21,8 +21,7 @@ fn ouput_solution(output_file: String,
     output.push_str("+Unassigned requests\n");
     for i in 0..solution.req_to_car.len() {
         if solution.req_to_car[i] == -1 {
-            let car = solution.req_to_car[i];
-            output.push_str(&format!("req{i};car{car}\n"));
+            output.push_str(&format!("req{i}\n"));
         }
     }
     fs::write(output_file, output)

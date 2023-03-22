@@ -173,6 +173,7 @@ fn read_request(line: &str,
         return Err(format!("Missing pen1 on line: {:}", line_num));
     }
     reqs.push(Request {
+        req: reqs.len() as i64,
         zone: zoneid,
         day: day as i64,
         start: start as i64,
@@ -211,9 +212,10 @@ fn read_zone(line: &str,
     }
     if let Some(second) = columns.next() {
         for zone_str in second.split(','){
-            let index_opt = zone_str.get(1..2);
+            let mut index_it = zone_str.split('z');
+            _ = index_it.next();
             let index;
-            if let Some(_index) = index_opt{
+            if let Some(_index) = index_it.next(){
                 index = _index;
             } else {
                 return Err(format!("Not able to parse int for zone on line {:}", line_num));
@@ -230,6 +232,7 @@ fn read_zone(line: &str,
         }
     }
     zone.push(Zone {
+        zone: zone.len() as i64,
         zonerel: zone_rel,
         nextto
     });
