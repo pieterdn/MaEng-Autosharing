@@ -16,7 +16,6 @@ pub fn read_input(input: String) -> Result<(Vec<Request>, Vec<Zone>, i64), Strin
     let mut zone_amount: i64 = 0;
     let mut amount = 0;
     for (i, line) in input.lines().enumerate() {
-        println!("line: {:}, amount: {:}", i, amount);
         if amount != 0 {
             match bleep {
                 InputField::Requests => {
@@ -33,13 +32,11 @@ pub fn read_input(input: String) -> Result<(Vec<Request>, Vec<Zone>, i64), Strin
         let line = line.trim();
         let mut splitted = line.split(":");
         if let Some(first_part) = splitted.next() {
-            println!("{:?}", first_part);
             match first_part {
                 "+Requests" => {
                     amount = get_amount(splitted.next(), i)?;
                     // amount -= 1;
                     bleep = InputField::Requests;
-                    println!("at requests {:} {:}", i, amount);
                 },
                 "+Zones" => {
                     amount = get_amount(splitted.next(), i)?;
@@ -107,7 +104,6 @@ fn read_request(line: &str,
     }
     let day: i32;
     if let Some(second) = columns.next() {
-        println!("{:?}", second.trim());
         if let Ok(num) = str::parse(second.trim()) {
             day = num;
         } else {

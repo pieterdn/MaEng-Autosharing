@@ -9,11 +9,11 @@ const MINUTES_IN_DAY: i64 = 1440;
 
 #[derive(Debug)]
 pub struct SolutionModel<'a> {
-    req_to_car: Vec<i64>,
-    car_to_zone: Vec<i64>,
-    reqs: &'a Vec<Request>,
-    zones: &'a Vec<Zone>,
-    cost: i64
+    pub req_to_car: Vec<i64>,
+    pub car_to_zone: Vec<i64>,
+    pub reqs: &'a Vec<Request>,
+    pub zones: &'a Vec<Zone>,
+    pub cost: i64
 }
 
 #[derive(Debug)]
