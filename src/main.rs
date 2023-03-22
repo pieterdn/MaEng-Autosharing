@@ -136,7 +136,7 @@ fn big_op(reqsol: &mut Solution,
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), String>{
-    let (input, ouput, time, seed, threads) = parse_args(env::args())?;
+    let (input, ouput, time, seed, _) = parse_args(env::args())?;
     let join = task::spawn(async move {
         sleep(Duration::from_secs(time as u64)).await;
     });

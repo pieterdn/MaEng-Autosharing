@@ -3,7 +3,6 @@ use std::cmp::{
     max,
     min
 };
-use std::cell::RefCell;
 
 const MINUTES_IN_DAY: i64 = 1440;
 
@@ -19,10 +18,10 @@ pub struct SolutionModel<'a> {
 #[derive(Debug)]
 struct TransactionReq {
     req: i64,
-    carFrom: i64,
-    carTo: i64,
-    costFrom: i64,
-    costTo: i64
+    car_from: i64,
+    car_to: i64,
+    cost_from: i64,
+    cost_to: i64
 }
 
 #[derive(Debug)]
@@ -65,7 +64,7 @@ impl<'a> Solution<'a> {
             cost += req.pen1;
         }
         Solution {
-            req_to_car: (0..num_reqs).map(|x| -1).collect(),
+            req_to_car: (0..num_reqs).map(|_| -1).collect(),
             req_to_car_bools: vec![vec![false; num_cars as usize]; num_reqs as usize],
             car_to_req_number: vec![HashSet::new(); num_cars as usize],
             car_to_zone_bools: vec![vec![false; num_cars as usize]; zones.len() as usize],
@@ -93,24 +92,24 @@ impl<'a> Solution<'a> {
         for trans in self.transaction.iter().rev() {
             match trans {
                 Transaction::Req(trans_req) => {
-                    self.req_to_car[trans_req.req as usize] = trans_req.carFrom;
-                    if trans_req.carTo >= 0 {
+                    self.req_to_car[trans_req.req as usize] = trans_req.car_from;
+                    if trans_req.car_to >= 0 {
                         self.req_to_car_bools
                             [trans_req.req as usize]
-                            [trans_req.carTo as usize]
+                            [trans_req.car_to as usize]
                                 = false;
-                        self.car_to_req_number[trans_req.carTo as usize].remove(&trans_req.req);
+                        self.car_to_req_number[trans_req.car_to as usize].remove(&trans_req.req);
                     }
-                    if trans_req.carFrom >= 0 {
+                    if trans_req.car_from >= 0 {
                         self.req_to_car_bools
                             [trans_req.req as usize]
-                            [trans_req.carFrom as usize]
+                            [trans_req.car_from as usize]
                                 = true;
-                        self.car_to_req_number[trans_req.carFrom as usize]
+                        self.car_to_req_number[trans_req.car_from as usize]
                             .insert(trans_req.req);
                     }
-                    self.cost_per_req[trans_req.req as usize] = trans_req.costFrom;
-                    self.cost += trans_req.costFrom - trans_req.costTo;
+                    self.cost_per_req[trans_req.req as usize] = trans_req.cost_from;
+                    self.cost += trans_req.cost_from - trans_req.cost_to;
                 },
                 Transaction::Car(trans_car) => {
                     self.car_to_zone[trans_car.car as usize] = trans_car.zone_from;
@@ -239,10 +238,10 @@ impl<'a> Solution<'a> {
             self.transaction.push(
                 Transaction::Req(TransactionReq {
                     req,
-                    carFrom: self.req_to_car[req as usize],
-                    carTo: car,
-                    costFrom: self.cost_per_req[req as usize],
-                    costTo: new_cost 
+                    car_from: self.req_to_car[req as usize],
+                    car_to: car,
+                    cost_from: self.cost_per_req[req as usize],
+                    cost_to: new_cost 
                 })
                 );
         }
@@ -265,10 +264,10 @@ impl<'a> Solution<'a> {
                         Transaction::Req(
                             TransactionReq {
                                 req,
-                                carFrom: car,
-                                carTo: car,
-                                costFrom: self.cost_per_req[req as usize],
-                                costTo: new_cost 
+                                car_from: car,
+                                car_to: car,
+                                cost_from: self.cost_per_req[req as usize],
+                                cost_to: new_cost 
                             })
                         );
                 }
@@ -279,10 +278,10 @@ impl<'a> Solution<'a> {
                         Transaction::Req(
                             TransactionReq {
                                 req,
-                                carFrom: car,
-                                carTo: -1,
-                                costFrom: self.cost_per_req[req as usize],
-                                costTo: new_cost 
+                                car_from: car,
+                                car_to: -1,
+                                cost_from: self.cost_per_req[req as usize],
+                                cost_to: new_cost 
                             })
                         );
                 }
