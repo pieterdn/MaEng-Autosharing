@@ -137,9 +137,6 @@ fn big_op(reqsol: &mut Solution,
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), String>{
     let (input, ouput, time, seed, _) = parse_args(env::args())?;
-    let join = task::spawn(async move {
-        sleep(Duration::from_secs(time as u64)).await;
-    });
     let mut rng = rand::SeedableRng::seed_from_u64(seed);
     let mut file = File::open(input).map_err(|x| format!("io error: {x}"))?;
     let mut contents = String::new();
@@ -153,6 +150,9 @@ async fn main() -> Result<(), String>{
     cars_ints.shuffle(&mut rng);
     let mut req_ints: Vec<i64> = (0..reqsol.reqs.len()).map(|x| x as i64).collect();
     zone_ints.shuffle(&mut rng);
+    let join = task::spawn(async move {
+        sleep(Duration::from_secs(time as u64)).await;
+    });
     let start = Instant::now();
 
     let mut count = 0;
