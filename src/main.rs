@@ -11,10 +11,15 @@ use crate::output::ouput_solution;
 use std::fs::File;
 use std::io::prelude::*;
 use std::env;
-use std::iter::zip;
 use rand::seq::{
     IteratorRandom, SliceRandom
 };
+use tokio::task;
+use tokio::time::{
+    sleep,
+    Duration
+};
+use std::time::Instant;
 
 fn create_initial_input<'a>(reqs: &'a Vec<Request>,
                         zones: &'a Vec<Zone>,
@@ -52,20 +57,137 @@ fn create_initial_input<'a>(reqs: &'a Vec<Request>,
     return reqsol;
 }
 
+fn small_operator(reqsol: &mut Solution,
+                  req_ints: &mut Vec<i64>,
+                  cars_ints: &mut Vec<i64>,
+                  rng: &mut rand::rngs::StdRng) -> bool {
+    req_ints.shuffle(rng);
+    cars_ints.shuffle(rng);
+    // req, car, cost
+    let mut best: Option<(i64, i64, i64)> = None;
+    for &req in req_ints.iter() {
+        for &car in cars_ints.iter() {
+            if !reqsol.feasible_car_to_req(req, car) { continue; }
+            let new_cost = reqsol.new_cost(req, car);
+            if None == best || new_cost < best.unwrap().2 {
+                best = Some((req, car, new_cost));
+            }
+        }
+    }
+    if best == None || best.unwrap().2 >= reqsol.cost {
+        // println!("\tSmall operator failed improvement: {:}", reqsol.cost);
+        return false;
+    }
 
-fn main() -> Result<(), String>{
+    let best = best.unwrap();
+    reqsol.add_car_to_req(best.0, best.1);
+    // println!("\tSmall operator succeeded improvement: {:}", reqsol.cost);
+    return true;
+}
+
+fn big_operator(reqsol: &mut Solution,
+                zone_ints: &mut Vec<i64>,
+                cars_ints: &mut Vec<i64>,
+                rng: &mut rand::rngs::StdRng) -> bool {
+    zone_ints.shuffle(rng);
+    cars_ints.shuffle(rng);
+    let old_cost = reqsol.cost;
+    for &car in cars_ints.iter() {
+        for &zone in zone_ints.iter() {
+            reqsol.start_transaction();
+            big_op(reqsol, cars_ints, car, zone);
+            if reqsol.cost < old_cost {
+                reqsol.commit();
+                // println!("\tBig operator succeeded improvement: {:}", reqsol.cost);
+                return true;
+            }
+            reqsol.rollback();
+        }
+    }
+    // println!("\tBig operator failed improvement: {:}", reqsol.cost);
+    return false;
+}
+
+fn big_op(reqsol: &mut Solution,
+          cars_ints: &Vec<i64>,
+          rand_car: i64,
+          rand_zone: i64) {
+    let mut lost_before = Vec::new();
+    let lost = reqsol.change_car_zone(rand_car, rand_zone);
+    for (i, &car) in reqsol.req_to_car.iter().enumerate() {
+        if car < 0 {
+            lost_before.push(i);
+        }
+    }
+    for &req in lost_before.iter() {
+        let req = req as i64;
+        if reqsol.feasible_car_to_req(req, rand_car) {
+            reqsol.add_car_to_req(req, rand_car);
+        }
+    }
+    for &req in lost.iter() {
+        for &car in cars_ints.iter() {
+            if reqsol.feasible_car_to_req(req, car) {
+                reqsol.add_car_to_req(req, car);
+            }
+        }
+    }
+}
+
+#[tokio::main(flavor = "multi_thread")]
+async fn main() -> Result<(), String>{
     let (input, ouput, time, seed, threads) = parse_args(env::args())?;
+    let join = task::spawn(async move {
+        sleep(Duration::from_secs(time as u64)).await;
+    });
     let mut rng = rand::SeedableRng::seed_from_u64(seed);
     let mut file = File::open(input).map_err(|x| format!("io error: {x}"))?;
     let mut contents = String::new();
     file.read_to_string(&mut contents).map_err(|x| format!("io error: {x}"))?;
     let (reqs, zones, vehicles_amount) = read_input(contents).unwrap();
-    let reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
-    let best_sol = reqsol.to_model();
-    println!("{:?}", reqs);
-    println!("{:?}", zones);
-    println!("{:?}", vehicles_amount);
-    // println!("{:?}", best_sol);
+    let mut reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
+    let mut best_sol = reqsol.to_model();
+    let mut zone_ints: Vec<i64> = (0..reqsol.zones.len()).map(|x| x as i64).collect();
+    zone_ints.shuffle(&mut rng);
+    let mut cars_ints: Vec<i64> = (0..vehicles_amount).map(|x| x as i64).collect();
+    cars_ints.shuffle(&mut rng);
+    let mut req_ints: Vec<i64> = (0..reqsol.reqs.len()).map(|x| x as i64).collect();
+    zone_ints.shuffle(&mut rng);
+    let start = Instant::now();
+
+    let mut count = 0;
+    let mut once = false;
+    let mut initial_cost = reqsol.cost;
+    let mut initial_best = reqsol.cost;
+    while !join.is_finished(){
+        if !big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng) {
+            if count > 1 {
+                while small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng) {}
+                if once {
+                    once = false;
+                } else {
+                    once = true;
+                    // println!("\tCost improvement: {:} -> {:}", initial_cost, reqsol.cost);
+                    reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
+                    initial_cost = reqsol.cost;
+                } 
+            } else {
+                for _ in 0..5 {
+                    if !small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng) {
+                        break;
+                    }
+                }
+            }
+            count += 1;
+        }
+        if reqsol.cost < best_sol.cost {
+            initial_best = initial_cost;
+            best_sol = reqsol.to_model();
+        }
+    }
+    let duration = start.elapsed();
+    println!("Elapsed time: {:?}", duration);
+    println!("Cost improvement: {:} -> {:}", initial_best, best_sol.cost);
     ouput_solution(ouput, best_sol)?;
     return Ok(());
 }
