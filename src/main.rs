@@ -168,7 +168,7 @@ fn big_op(reqsol: &mut Solution,
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), String>{
     let (input, ouput, time, seed, _) = parse_args(env::args())?;
-    let mut rng = rand::SeedableRng::seed_from_u64(seed);
+    let mut rng: rand::rngs::StdRng = rand::SeedableRng::seed_from_u64(seed);
     let mut file = File::open(input).map_err(|x| format!("io error: {x}"))?;
     let mut contents = String::new();
     file.read_to_string(&mut contents).map_err(|x| format!("io error: {x}"))?;
@@ -186,58 +186,34 @@ async fn main() -> Result<(), String>{
     });
     let start = Instant::now();
 
-    let mut count = 0;
-    let mut once = false;
     let mut initial_cost = reqsol.cost;
     let mut initial_best = reqsol.cost;
     const BEGIN_TEMP: f64 = 300.0;
     const MIN_TEMP: f64 = 5.0;
     let mut temp = BEGIN_TEMP;
     const BIG_FAIL: i32 = 5;
-    let mut big_prev = OperatorOut::Improve;
-    while !join.is_finished(){
-        let big_out = big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, temp*count as f64);
-        if big_out == OperatorOut::Fail || (big_out == OperatorOut::Improve && big_prev == OperatorOut::Increase && temp < MIN_TEMP*2.0){
-            if big_out == OperatorOut::Improve && big_prev == OperatorOut::Increase {
-                for _ in 0..5 {
-                    big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, 2.0*temp*count as f64);
-                    small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, 2.0*temp*count as f64);
-                }
-            }
-            if count > 1 {
-                loop {
-                    let small_out = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp*count as f64);
-                    if small_out == OperatorOut::Fail { break; }
-                }
-                if once {
-                    once = false;
-                } else if temp < MIN_TEMP {
-                    once = true;
-                    println!("\tCost improvement: {:} -> {:}", initial_cost, best_sol.cost);
-                    reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
-                    temp = BEGIN_TEMP;
-                    initial_cost = reqsol.cost;
-                } 
-            } else {
-                for _ in 0..5 {
-                    let small_out = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp);
-                    if small_out == OperatorOut::Fail {
-                        break;
-                    }
-                }
-            }
-            count += 1;
-        } else if big_out == OperatorOut::Improve && big_prev != OperatorOut::Improve{
-            count = 0;
+    const START_AMOUNT: i32 = 1000;
+    let mut amount = START_AMOUNT;
+    while !join.is_finished() {
+        big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, temp);
+        small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp);
+        amount -= 1;
+        if amount <= 0 {
+            temp /= 1.3;
+            println!("{:?}", temp);
+            amount = START_AMOUNT;
+        }
+        if temp < MIN_TEMP {
+            println!("\tCost improvement: {:} -> {:}", initial_cost, best_sol.cost);
+            reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
+            temp = BEGIN_TEMP;
+            initial_cost = reqsol.cost;
         }
         if reqsol.cost < best_sol.cost {
             initial_best = initial_cost;
             best_sol = reqsol.to_model();
+            println!("best: {:?}", best_sol.cost);
         }
-        if temp > MIN_TEMP {
-            temp *= 0.99980;
-        }
-        big_prev = big_out;
     }
     let duration = start.elapsed();
     println!("Elapsed time: {:?}", duration);
