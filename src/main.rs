@@ -32,9 +32,9 @@ enum OperatorOut {
 
 fn create_initial_input<'a>(reqs: &'a Vec<Request>,
                         zones: &'a Vec<Zone>,
-                        amount_cars: i64,
+                        amount_cars: i32,
                         rng: &mut rand::rngs::StdRng) -> Solution<'a> {
-    let mut reqsol = Solution::new(reqs.len() as i64, amount_cars, reqs, zones);
+    let mut reqsol = Solution::new(reqs.len() as i32, amount_cars, reqs, zones);
     let mut rand_reqs = reqs.iter().choose_multiple(rng, reqs.len());
     rand_reqs.shuffle(rng);
     for req in rand_reqs {
@@ -43,15 +43,15 @@ fn create_initial_input<'a>(reqs: &'a Vec<Request>,
             let zone = reqsol.car_to_zone[car as usize];
             if zone < 0 {
                 let new_zone = req.zone;
-                reqsol.change_cost(i as i64, 0);
+                reqsol.change_cost(i as i32, 0);
                 reqsol.zone_hard_change(car, new_zone);
-                reqsol.car_hard_change(i as i64, car);
+                reqsol.car_hard_change(i as i32, car);
                 break;
             } else {
-                if reqsol.feasible_car_to_req(i as i64, car) {
-                    let (new_cost , _) = reqsol.cost_and_feasible_zone(i as i64, zone);
-                    reqsol.change_cost(i as i64, new_cost);
-                    reqsol.car_hard_change(i as i64, car);
+                if reqsol.feasible_car_to_req(i as i32, car) {
+                    let (new_cost , _) = reqsol.cost_and_feasible_zone(i as i32, zone);
+                    reqsol.change_cost(i as i32, new_cost);
+                    reqsol.car_hard_change(i as i32, car);
                     break;
                 }
             }
@@ -66,23 +66,28 @@ fn create_initial_input<'a>(reqs: &'a Vec<Request>,
     return reqsol;
 }
 
-fn activation_fnc(dif: i64, temp: f64, rng: &mut rand::rngs::StdRng) -> bool {
-    if dif <= 0 {
+fn activation_fnc(dif: i32, temp: f64, rng: &mut rand::rngs::StdRng) -> bool {
+    let dif = if dif < 0 {
         return false;
-    }
+    } else if dif == 0 {
+        1
+    } else {
+        dif
+    };
     let chance = f64::exp(-dif as f64/temp);
     return rng.gen_bool(chance);
 }
 
 fn small_operator(reqsol: &mut Solution,
-                  req_ints: &mut Vec<i64>,
-                  cars_ints: &mut Vec<i64>,
+                  req_ints: &mut Vec<i32>,
+                  cars_ints: &mut Vec<i32>,
                   rng: &mut rand::rngs::StdRng,
-                  temp: f64) -> OperatorOut {
+                  temp: f64,
+                  threshold: i32) -> OperatorOut {
     req_ints.shuffle(rng);
     cars_ints.shuffle(rng);
     // req, car, cost
-    let mut best: Option<(i64, i64, i64)> = None;
+    let mut best: Option<(i32, i32, i32)> = None;
     for &req in req_ints.iter() {
         for &car in cars_ints.iter() {
             if !reqsol.feasible_car_to_req(req, car) { continue; }
@@ -95,12 +100,12 @@ fn small_operator(reqsol: &mut Solution,
     if best == None {
         // println!("\tSmall operator failed improvement: {:}", reqsol.cost);
         return OperatorOut::Fail;
-    } else if activation_fnc(best.unwrap().2 - reqsol.cost, temp, rng) {
+    } else if threshold > best.unwrap().2 - reqsol.cost && activation_fnc(best.unwrap().2 - reqsol.cost, temp, rng) {
         let best = best.unwrap();
         reqsol.add_car_to_req(best.0, best.1);
         // println!("\tSmall operator succeeded increase: {:}", reqsol.cost);
         return OperatorOut::Increase;
-    } else if best.unwrap().2 <= reqsol.cost {
+    } else if best.unwrap().2 < reqsol.cost {
         // println!("\tSmall operator failed improvement: {:}", reqsol.cost);
         return OperatorOut::Fail;
     }
@@ -112,10 +117,11 @@ fn small_operator(reqsol: &mut Solution,
 }
 
 fn big_operator(reqsol: &mut Solution,
-                zone_ints: &mut Vec<i64>,
-                cars_ints: &mut Vec<i64>,
+                zone_ints: &mut Vec<i32>,
+                cars_ints: &mut Vec<i32>,
                 rng: &mut rand::rngs::StdRng,
-                temp: f64) -> OperatorOut {
+                temp: f64,
+                threshold: i32) -> OperatorOut {
     zone_ints.shuffle(rng);
     cars_ints.shuffle(rng);
     let old_cost = reqsol.cost;
@@ -123,11 +129,12 @@ fn big_operator(reqsol: &mut Solution,
         for &zone in zone_ints.iter() {
             reqsol.start_transaction();
             big_op(reqsol, cars_ints, car, zone);
+            let dif = reqsol.cost - old_cost;
             if reqsol.cost < old_cost {
                 reqsol.commit();
                 // println!("\tBig operator succeeded improvement: {:}", reqsol.cost);
                 return OperatorOut::Improve;
-            } else if activation_fnc(reqsol.cost - old_cost, temp, rng) {
+            } else if dif > threshold && activation_fnc(dif, temp, rng) {
                 reqsol.commit();
                 // println!("\tBig operator succeeded increase: {:}", reqsol.cost);
                 return OperatorOut::Increase;
@@ -140,9 +147,9 @@ fn big_operator(reqsol: &mut Solution,
 }
 
 fn big_op(reqsol: &mut Solution,
-          cars_ints: &Vec<i64>,
-          rand_car: i64,
-          rand_zone: i64) {
+          cars_ints: &Vec<i32>,
+          rand_car: i32,
+          rand_zone: i32) {
     let mut lost_before = Vec::new();
     let lost = reqsol.change_car_zone(rand_car, rand_zone);
     for (i, &car) in reqsol.req_to_car.iter().enumerate() {
@@ -151,7 +158,7 @@ fn big_op(reqsol: &mut Solution,
         }
     }
     for &req in lost_before.iter() {
-        let req = req as i64;
+        let req = req as i32;
         if reqsol.feasible_car_to_req(req, rand_car) {
             reqsol.add_car_to_req(req, rand_car);
         }
@@ -175,11 +182,11 @@ async fn main() -> Result<(), String>{
     let (reqs, zones, vehicles_amount) = read_input(contents).unwrap();
     let mut reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
     let mut best_sol = reqsol.to_model();
-    let mut zone_ints: Vec<i64> = (0..reqsol.zones.len()).map(|x| x as i64).collect();
+    let mut zone_ints: Vec<i32> = (0..reqsol.zones.len()).map(|x| x as i32).collect();
     zone_ints.shuffle(&mut rng);
-    let mut cars_ints: Vec<i64> = (0..vehicles_amount).map(|x| x as i64).collect();
+    let mut cars_ints: Vec<i32> = (0..vehicles_amount).map(|x| x as i32).collect();
     cars_ints.shuffle(&mut rng);
-    let mut req_ints: Vec<i64> = (0..reqsol.reqs.len()).map(|x| x as i64).collect();
+    let mut req_ints: Vec<i32> = (0..reqsol.reqs.len()).map(|x| x as i32).collect();
     zone_ints.shuffle(&mut rng);
     let join = task::spawn(async move {
         sleep(Duration::from_secs(time as u64)).await;
@@ -194,16 +201,27 @@ async fn main() -> Result<(), String>{
     const BIG_FAIL: i32 = 5;
     const START_AMOUNT: i32 = 1000;
     let mut amount = START_AMOUNT;
+    let mut loop_amount = 0;
+    let mut stuck = 0;
+    let threshold = 60;
     while !join.is_finished() {
-        big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, temp);
-        small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp);
+        loop_amount += 1;
+        let big_res = big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, temp + stuck as f64*3.0, threshold + stuck);
+        let small_res = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp + stuck as f64*3.0, threshold + stuck);
+        if (big_res == OperatorOut::Fail && small_res == OperatorOut::Fail) || (big_res == OperatorOut::Increase && small_res == OperatorOut::Increase) {
+            stuck += 30;
+        } else {
+            if stuck > 0 {
+                stuck -= 1;
+            }
+        }
         amount -= 1;
         if amount <= 0 {
             temp /= 1.3;
             println!("{:?}", temp);
             amount = START_AMOUNT;
         }
-        if temp < MIN_TEMP {
+        if temp < MIN_TEMP || stuck > START_AMOUNT/2 {
             println!("\tCost improvement: {:} -> {:}", initial_cost, best_sol.cost);
             reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
             temp = BEGIN_TEMP;
@@ -216,6 +234,7 @@ async fn main() -> Result<(), String>{
         }
     }
     let duration = start.elapsed();
+    println!("loop amount: {:}", loop_amount);
     println!("Elapsed time: {:?}", duration);
     println!("Cost improvement: {:} -> {:}", initial_best, best_sol.cost);
     ouput_solution(ouput, best_sol)?;

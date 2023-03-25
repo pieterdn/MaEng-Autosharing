@@ -8,12 +8,12 @@ enum InputField {
     Zones,
 }
 
-pub fn read_input(input: String) -> Result<(Vec<Request>, Vec<Zone>, i64), String> {
+pub fn read_input(input: String) -> Result<(Vec<Request>, Vec<Zone>, i32), String> {
     let mut reqs: Vec<Request> = Vec::new();
     let mut zones: Vec<Zone> = Vec::new();
-    let mut vehicle_amount: Option<i64> = None;
+    let mut vehicle_amount: Option<i32> = None;
     let mut bleep: InputField = InputField::Requests;
-    let mut zone_amount: i64 = 0;
+    let mut zone_amount: i32 = 0;
     let mut amount = 0;
     for (i, line) in input.lines().enumerate() {
         if amount != 0 {
@@ -62,7 +62,7 @@ pub fn read_input(input: String) -> Result<(Vec<Request>, Vec<Zone>, i64), Strin
     }
 }
 
-fn get_amount(amount: Option<&str>, line_amount: usize) -> Result<i64, String> {
+fn get_amount(amount: Option<&str>, line_amount: usize) -> Result<i32, String> {
     if let Some(amount_str) = amount {
         if let Ok(num) = str::parse(amount_str.trim()) {
             return Ok(num);
@@ -78,7 +78,7 @@ fn read_request(line: &str,
                  reqs: &mut Vec<Request>,
                  line_num: usize) -> Result<(), String> {
     let mut columns = line.split(';');
-    let zoneid: i64;
+    let zoneid: i32;
     if let Some(_) = columns.next() {
     } else {
         return Ok(());
@@ -132,7 +132,7 @@ fn read_request(line: &str,
     } else {
         return Err(format!("Missing time on line: {:}", line_num));
     }
-    let mut cars: Vec<i64> = Vec::new();
+    let mut cars: Vec<i32> = Vec::new();
     if let Some(fifth) = columns.next() {
         for car in fifth.split(',') {
             let mut index_it = car.split("car");
@@ -173,11 +173,11 @@ fn read_request(line: &str,
         return Err(format!("Missing pen1 on line: {:}", line_num));
     }
     reqs.push(Request {
-        req: reqs.len() as i64,
+        req: reqs.len() as i32,
         zone: zoneid,
-        day: day as i64,
-        start: start as i64,
-        time: time as i64,
+        day: day as i32,
+        start: start as i32,
+        time: time as i32,
         cars,
         pen1,
         pen2
@@ -187,12 +187,12 @@ fn read_request(line: &str,
 
 fn read_zone(line: &str,
              zone: &mut Vec<Zone>,
-             zone_amount: i64,
+             zone_amount: i32,
              line_num: usize) -> Result<(), String> {
     let mut zone_rel: Vec<bool> = (0..zone_amount).map(|_| false).collect();
-    let mut nextto: Vec<i64> = Vec::new();
+    let mut nextto: Vec<i32> = Vec::new();
     let mut columns = line.split(';');
-    // let zone_index: i64;
+    // let zone_index: i32;
     if let Some(_) = columns.next() {
         // let mut index_it = first.split('z');
         // _ = index_it.next();
@@ -221,7 +221,7 @@ fn read_zone(line: &str,
                 return Err(format!("Not able to parse int for zone on line {:}", line_num));
             }
             if let Ok(num) = str::parse(index.trim()) {
-                if num >= zone_amount as i64{
+                if num >= zone_amount as i32{
                     return Err(format!("zone index higher than specified on line {:}", line_num));
                 }
                 zone_rel[num as usize] = true;
@@ -232,7 +232,7 @@ fn read_zone(line: &str,
         }
     }
     zone.push(Zone {
-        zone: zone.len() as i64,
+        zone: zone.len() as i32,
         zonerel: zone_rel,
         nextto
     });
