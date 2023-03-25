@@ -5,7 +5,8 @@ use crate::input::read_input;
 use crate::model::{
     Request,
     Zone,
-    Solution
+    Solution,
+    SolutionModel
 };
 use crate::output::ouput_solution;
 use std::fs::File;
@@ -172,15 +173,14 @@ fn big_op(reqsol: &mut Solution,
     }
 }
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() -> Result<(), String>{
-    let (input, ouput, time, seed, _) = parse_args(env::args())?;
+async fn start_search<'a>(reqs: &'a Vec<Request>,
+                zones: &'a Vec<Zone>,
+                vehicles_amount: i32,
+                // best_sol: &mut SolutionModel,
+                seed: u64,
+                time: u64) -> SolutionModel<'a> {
     let mut rng: rand::rngs::StdRng = rand::SeedableRng::seed_from_u64(seed);
-    let mut file = File::open(input).map_err(|x| format!("io error: {x}"))?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).map_err(|x| format!("io error: {x}"))?;
-    let (reqs, zones, vehicles_amount) = read_input(contents).unwrap();
-    let mut reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
+    let mut reqsol = create_initial_input(reqs, zones, vehicles_amount, &mut rng);
     let mut best_sol = reqsol.to_model();
     let mut zone_ints: Vec<i32> = (0..reqsol.zones.len()).map(|x| x as i32).collect();
     zone_ints.shuffle(&mut rng);
@@ -188,28 +188,28 @@ async fn main() -> Result<(), String>{
     cars_ints.shuffle(&mut rng);
     let mut req_ints: Vec<i32> = (0..reqsol.reqs.len()).map(|x| x as i32).collect();
     zone_ints.shuffle(&mut rng);
+    println!("{:}", time);
     let join = task::spawn(async move {
         sleep(Duration::from_secs(time as u64)).await;
     });
-    let start = Instant::now();
 
     let mut initial_cost = reqsol.cost;
     let mut initial_best = reqsol.cost;
-    const BEGIN_TEMP: f64 = 300.0;
+    const BEGIN_TEMP: f64 = 100.0;
     const MIN_TEMP: f64 = 5.0;
     let mut temp = BEGIN_TEMP;
     const BIG_FAIL: i32 = 5;
-    const START_AMOUNT: i32 = 1000;
+    const START_AMOUNT: i32 = 2500;
     let mut amount = START_AMOUNT;
     let mut loop_amount = 0;
     let mut stuck = 0;
     let threshold = 60;
     while !join.is_finished() {
         loop_amount += 1;
-        let big_res = big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, temp + stuck as f64*3.0, threshold + stuck);
-        let small_res = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp + stuck as f64*3.0, threshold + stuck);
+        let big_res = big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, temp + stuck as f64*6.0, threshold + stuck);
+        let small_res = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp + stuck as f64*7.0, threshold + stuck);
         if (big_res == OperatorOut::Fail && small_res == OperatorOut::Fail) || (big_res == OperatorOut::Increase && small_res == OperatorOut::Increase) {
-            stuck += 30;
+            stuck += 20;
         } else {
             if stuck > 0 {
                 stuck -= 1;
@@ -223,7 +223,7 @@ async fn main() -> Result<(), String>{
         }
         if temp < MIN_TEMP || stuck > START_AMOUNT/2 {
             println!("\tCost improvement: {:} -> {:}", initial_cost, best_sol.cost);
-            reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
+            reqsol = create_initial_input(reqs, zones, vehicles_amount, &mut rng);
             temp = BEGIN_TEMP;
             initial_cost = reqsol.cost;
         }
@@ -233,11 +233,56 @@ async fn main() -> Result<(), String>{
             println!("best: {:?}", best_sol.cost);
         }
     }
+    return best_sol;
+}
+
+#[tokio::main(flavor = "multi_thread")]
+async fn main() -> Result<(), String>{
+    let (input, ouput, time, seed, threads) = parse_args(env::args())?;
+    // let mut rng: rand::rngs::StdRng = rand::SeedableRng::seed_from_u64(seed);
+    let mut file = File::open(input).map_err(|x| format!("io error: {x}"))?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).map_err(|x| format!("io error: {x}"))?;
+    let (_reqs, _zones, vehicles_amount) = read_input(contents).unwrap();
+    let reqs = Box::leak(Box::new(_reqs)) as &Vec<Request>;
+    let zones = Box::leak(Box::new(_zones)) as &Vec<Zone>;
+    // let mut bestsol_vec: Vec<SolutionModel> = Vec::with_capacity(threads as usize);
+    let mut set = task::JoinSet::new();
+    let start = Instant::now();
+    for thread in 0..threads {
+        set.spawn(start_search(&reqs, &zones, vehicles_amount, seed + thread as u64, time as u64));
+    }
+    let mut best_sol: Option<SolutionModel> = None;
+    loop {
+        match set.join_next().await {
+            Some(Ok(new_sol)) => {
+                if let Some(best) = &best_sol {
+                    if best.cost > new_sol.cost {
+                        best_sol = Some(new_sol);
+                    }
+                } else {
+                    best_sol = Some(new_sol);
+                }
+            },
+            Some(Err(_)) => {
+                println!("A thread has failed execution");
+            }
+            None => break,
+        }
+        if let None = set.join_next().await {
+            break;
+        }
+    }
+
     let duration = start.elapsed();
-    println!("loop amount: {:}", loop_amount);
+    // println!("loop amount: {:}", loop_amount);
     println!("Elapsed time: {:?}", duration);
-    println!("Cost improvement: {:} -> {:}", initial_best, best_sol.cost);
-    ouput_solution(ouput, best_sol)?;
+    // println!("Cost improvement: {:} -> {:}", initial_best, best_sol.cost);
+    if let Some(best) = best_sol {
+        ouput_solution(ouput, best)?;
+    } else {
+        println!("Zero solutions optained from threads lol");
+    }
     return Ok(());
 }
 
