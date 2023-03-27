@@ -11,7 +11,6 @@ use crate::output::ouput_solution;
 use std::fs::File;
 use std::io::prelude::*;
 use std::env;
-use rand::Rng;
 use rand::seq::{
     IteratorRandom, SliceRandom
 };
@@ -66,23 +65,10 @@ fn create_initial_input<'a>(reqs: &'a Vec<Request>,
     return reqsol;
 }
 
-fn activation_fnc(dif: i32, temp: f64, rng: &mut rand::rngs::StdRng) -> bool {
-    let dif = if dif < 0 {
-        return false;
-    } else if dif == 0 {
-        1
-    } else {
-        dif
-    };
-    let chance = f64::exp(-dif as f64/temp);
-    return rng.gen_bool(chance);
-}
-
 fn small_operator(reqsol: &mut Solution,
                   req_ints: &mut Vec<i32>,
                   cars_ints: &mut Vec<i32>,
                   rng: &mut rand::rngs::StdRng,
-                  temp: f64,
                   threshold: i32) -> OperatorOut {
     req_ints.shuffle(rng);
     cars_ints.shuffle(rng);
@@ -100,10 +86,16 @@ fn small_operator(reqsol: &mut Solution,
     if best == None {
         // println!("\tSmall operator failed improvement: {:}", reqsol.cost);
         return OperatorOut::Fail;
-    } else if threshold > best.unwrap().2 - reqsol.cost && activation_fnc(best.unwrap().2 - reqsol.cost, temp, rng) {
+    }
+    let dif = best.unwrap().2 - reqsol.cost;
+    if threshold >= dif {
+        // println!("small: dif: {:} new: {:} old: {:}", dif, best.unwrap().2, reqsol.cost);
         let best = best.unwrap();
         reqsol.add_car_to_req(best.0, best.1);
         // println!("\tSmall operator succeeded increase: {:}", reqsol.cost);
+        if dif < 0 {
+            return OperatorOut::Improve;
+        }
         return OperatorOut::Increase;
     } else if best.unwrap().2 < reqsol.cost {
         // println!("\tSmall operator failed improvement: {:}", reqsol.cost);
@@ -120,7 +112,6 @@ fn big_operator(reqsol: &mut Solution,
                 zone_ints: &mut Vec<i32>,
                 cars_ints: &mut Vec<i32>,
                 rng: &mut rand::rngs::StdRng,
-                temp: f64,
                 threshold: i32) -> OperatorOut {
     zone_ints.shuffle(rng);
     cars_ints.shuffle(rng);
@@ -130,19 +121,18 @@ fn big_operator(reqsol: &mut Solution,
             reqsol.start_transaction();
             big_op(reqsol, cars_ints, car, zone);
             let dif = reqsol.cost - old_cost;
-            if reqsol.cost < old_cost {
+            if dif <= threshold {
                 reqsol.commit();
-                // println!("\tBig operator succeeded improvement: {:}", reqsol.cost);
-                return OperatorOut::Improve;
-            } else if dif > threshold && activation_fnc(dif, temp, rng) {
-                reqsol.commit();
+                if dif < 0 {
+                    return OperatorOut::Improve;
+                }
                 // println!("\tBig operator succeeded increase: {:}", reqsol.cost);
                 return OperatorOut::Increase;
             }
             reqsol.rollback();
         }
     }
-    // println!("\tBig operator failed improvement: {:}", reqsol.cost);
+    // println!("\tBig operator failed improvement: {:} {:}", reqsol.cost, old_cost);
     return OperatorOut::Fail;
 }
 
@@ -195,37 +185,23 @@ async fn main() -> Result<(), String>{
 
     let mut initial_cost = reqsol.cost;
     let mut initial_best = reqsol.cost;
-    const BEGIN_TEMP: f64 = 300.0;
-    const MIN_TEMP: f64 = 5.0;
-    let mut temp = BEGIN_TEMP;
-    const BIG_FAIL: i32 = 5;
-    const START_AMOUNT: i32 = 1000;
+    const START_AMOUNT: i32 = 2000;
     let mut amount = START_AMOUNT;
     let mut loop_amount = 0;
-    let mut stuck = 0;
-    let threshold = 60;
+    let mut threshold = 40;
     while !join.is_finished() {
         loop_amount += 1;
-        let big_res = big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, temp + stuck as f64*3.0, threshold + stuck);
-        let small_res = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, temp + stuck as f64*3.0, threshold + stuck);
-        if (big_res == OperatorOut::Fail && small_res == OperatorOut::Fail) || (big_res == OperatorOut::Increase && small_res == OperatorOut::Increase) {
-            stuck += 30;
-        } else {
-            if stuck > 0 {
-                stuck -= 1;
-            }
-        }
+        let _ = big_operator(&mut reqsol, &mut zone_ints, &mut cars_ints, &mut rng, threshold);
+        let _ = small_operator(&mut reqsol, &mut req_ints, &mut cars_ints, &mut rng, threshold);
         amount -= 1;
         if amount <= 0 {
-            temp /= 1.3;
-            println!("{:?}", temp);
             amount = START_AMOUNT;
+            threshold -= 2;
         }
-        if temp < MIN_TEMP || stuck > START_AMOUNT/2 {
-            println!("\tCost improvement: {:} -> {:}", initial_cost, best_sol.cost);
+        if threshold <= 20 {
             reqsol = create_initial_input(&reqs, &zones, vehicles_amount, &mut rng);
-            temp = BEGIN_TEMP;
             initial_cost = reqsol.cost;
+            threshold = 40;
         }
         if reqsol.cost < best_sol.cost {
             initial_best = initial_cost;
