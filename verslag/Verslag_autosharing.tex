@@ -118,9 +118,19 @@ Versie 3: i.p.v. zoals in Versie 2 de beste te zoeken, wordt dit keer de eerste 
 Versie 4: hierbij werd geen aanpassing gedaan aan de operator zelf, maar aan wanneer deze wordt uitgevoerd in combinatie met de kleine operator. In het begin blijven we de grote operator uitvoeren totdat deze geen verbetering meer geeft. Hierna voeren we de kleine operator 5 keer uit, waarna we de grote nog een keer uitvoeren. Als de grote operator in totaal 2 keer gefaald heeft, slaan we de huidige oplossing op en beginnen we met een nieuwe initiele oplossing. Iets dat we ook pas sinds deze versie doen. We zien op \ref{360_res} dat het resultaat (v5) voornamelijk beter is bij een langere runtime.
 
 \section{Metaheuristiek}
+In deze sectie gaan we het kort hebben over de verschillende metaheuristieken die wij geprobeerd hebben.
 \subsection{Simulated Annealing (v6)}
 
+Hierbij beginnen we met een start temperatuur van 300 na 1000 iteraties wordt deze gedeeld door 1,3 totdat we een minimum temperatuur 5 of kleiner bereiken of we voor 500 iteraties niet verbeteren.
+Nadat de local search stopt herbeginnen we met een andere initiele oplossing. Deze versie bevat ook een simplistische threshold die niet van waarde verandert behalve als we vast komen te zitten,
+hetzelfde gebeurt bij de temperatuur. Deze verhoogt als we falen om een betere oplossing te vinden.
+
 \subsection{Thresholding (v7)}
+
+In deze versie hebben we alleen maar voor thresholding gekozen, hierdoor ging de cost sneller naar beneden en hebben we onze beste cost gevonden.
+Deze versie houdt ook geen rekening met of het vast komt te lopen of niet. We zagen dat als we dit er wel bij staken op dezelfde manier als bij versie 6 dat dit eigenlijk niks deed.
+Het verschil met deze thresholding en met de simplistische thresholding die we in versie 6 deden is dat deze wel daalt. De threshold daalt met 2 na 2000 iteraties en start op 40.
+Als de threshold 20 of lager gaat proberen we opnieuw met een andere initiele oplossing.
 
 \section{Resultaten}
 Hieronder kan u de resultaten zien voor de finale versie (v7), dit is de versie met thresholding. De resultaten zijn voor 360\_5\_71\_25.csv met telkens een runtime van 5 minuten en een random seed.
