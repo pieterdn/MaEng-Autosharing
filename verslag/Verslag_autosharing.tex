@@ -102,19 +102,32 @@ Als er over alle wagens (die mogelijk zijn voor de specifieke reservatie) gegaan
 \subsection{Grote Operator}
 
 \section{Metaheuristiek}
-\subsection{Simulated Annealing}
+\subsection{Simulated Annealing (v6)}
 
-\subsection{Thresholding}
+\subsection{Thresholding (v7)}
 
 \section{Resultaten}
+Hieronder kan u de resultaten zien voor de finale versie (v7), dit is de versie met thresholding. De resultaten zijn voor 360\_5\_71\_25.csv met telkens een runtime van 5 minuten en een random seed.
 
+\begin{center}
+\pgfplotstabletypeset{final_data.dat}
+\end{center}
 \section{Bijlagen}
 
-%%\pgfplotstabletypeset{data_100.dat}
+\begin{figure}[ht]
+\begin{center}
 \begin{tikzpicture}
 \begin{axis}[
-    ylabel=Cost, 
-    xlabel=Runtime (min)]
+    width=3.5in,
+    ylabel={Cost}, 
+    xlabel={Runtime [min]},
+    ytick={10000,11000,12000,13000},
+    ymajorgrids=true,
+    grid style=dashed,
+    tick label style={/pgf/number format/fixed},
+    scaled ticks=false,
+    legend pos=outer north east,
+    ]
     \addplot table [y=v1, x=Time]{data_100.dat};
     \addlegendentry{Version 1}
     \addplot table [y=v2, x=Time]{data_100.dat};
@@ -127,13 +140,28 @@ Als er over alle wagens (die mogelijk zijn voor de specifieke reservatie) gegaan
     \addlegendentry{Version 5}
     \addplot table [y=v6, x=Time]{data_100.dat};
     \addlegendentry{Version 6}
+    \addplot table [y=v7, x=Time]{data_100.dat};
+    \addlegendentry{Version 7}
 \end{axis}
 \end{tikzpicture}
+\end{center}
+\caption{Results for 100\_5\_14\_25.csv with seed 123}
+\end{figure}
 
+\begin{figure}[ht]
+\begin{center}
 \begin{tikzpicture}
     \begin{axis}[
-        ylabel=Cost, 
-        xlabel=Runtime (min)]
+        width=3.5in,
+        ylabel={Cost}, 
+        xlabel={Runtime [min]},
+        ytick={10000,15000, 20000, 25000},
+        ymajorgrids=true,
+        grid style=dashed,
+        tick label style={/pgf/number format/fixed},
+        scaled ticks=false,
+        legend pos=outer north east,
+        ]
         \addplot table [y=v1, x=Time]{data_360.dat};
         \addlegendentry{Version 1}
         \addplot table [y=v2, x=Time]{data_360.dat};
@@ -146,8 +174,13 @@ Als er over alle wagens (die mogelijk zijn voor de specifieke reservatie) gegaan
         \addlegendentry{Version 5}
         \addplot table [y=v6, x=Time]{data_360.dat};
         \addlegendentry{Version 6}
+        \addplot table [y=v7, x=Time]{data_100.dat};
+        \addlegendentry{Version 7}
     \end{axis}
 \end{tikzpicture}
+\caption{Results for 360\_5\_71\_25.csv with seed 123}
+\end{center}
+\end{figure}
 
 % \begin{filecontents*}{100_seeds.csv}
 % seed, cost
