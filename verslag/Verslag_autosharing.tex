@@ -24,6 +24,7 @@ marginparwidth=1.5cm, marginparsep=0.4cm, margin=2.5cm]{geometry}
 \usepackage{mathpazo}
 %\usepackage[margin=0.25in]{geometry}
 \usepackage{pgfplots}
+\usepackage{pgfplotstable}
 \pgfplotsset{width=10cm,compat=1.9}
 \usepackage {tikz}
 \usetikzlibrary {positioning}
@@ -86,6 +87,7 @@ Deze voorstelling is gebaseerd op de output-file dat gegenereerd moet worden. Da
 
 \section{Datavoorstelling}
 
+
 \section{Initiele Oplossing}
 Om de initiele oplossing te berekenen gaan we sequentieel over de lijst van reservaties. Bij elke reservatie gaan we de verschillende wagens af. Eerst wordt er nagegaan of de wagen reeds aan een zone gelinkt is, indien dit nog niet het geval is, plaatsen we de wagen in de zone van de reservatie. 
 
@@ -104,18 +106,60 @@ Als er over alle wagens (die mogelijk zijn voor de specifieke reservatie) gegaan
 
 \subsection{Thresholding}
 
+\section{Resultaten}
+
 \section{Bijlagen}
-\begin{filecontents*}{100_seeds.csv}
-seed, cost
-\end{filecontents*}
+
+%%\pgfplotstabletypeset{data_100.dat}
+\begin{tikzpicture}
+\begin{axis}[
+    ylabel=Cost, 
+    xlabel=Runtime (min)]
+    \addplot table [y=v1, x=Time]{data_100.dat};
+    \addlegendentry{Version 1}
+    \addplot table [y=v2, x=Time]{data_100.dat};
+    \addlegendentry{Version 2}
+    \addplot table [y=v3, x=Time]{data_100.dat};
+    \addlegendentry{Version 3}
+    \addplot table [y=v4, x=Time]{data_100.dat};
+    \addlegendentry{Version 4}
+    \addplot table [y=v5, x=Time]{data_100.dat};
+    \addlegendentry{Version 5}
+    \addplot table [y=v6, x=Time]{data_100.dat};
+    \addlegendentry{Version 6}
+\end{axis}
+\end{tikzpicture}
 
 \begin{tikzpicture}
     \begin{axis}[
-        ymin = 9500, ymax = 11000,
-        xmin = 0, xmax = 100
-    ]
-    \addplot table [x=seed, y=cost, col sep=comma] {100_seeds.csv};
+        ylabel=Cost, 
+        xlabel=Runtime (min)]
+        \addplot table [y=v1, x=Time]{data_360.dat};
+        \addlegendentry{Version 1}
+        \addplot table [y=v2, x=Time]{data_360.dat};
+        \addlegendentry{Version 2}
+        \addplot table [y=v3, x=Time]{data_360.dat};
+        \addlegendentry{Version 3}
+        \addplot table [y=v4, x=Time]{data_360.dat};
+        \addlegendentry{Version 4}
+        \addplot table [y=v5, x=Time]{data_360.dat};
+        \addlegendentry{Version 5}
+        \addplot table [y=v6, x=Time]{data_360.dat};
+        \addlegendentry{Version 6}
     \end{axis}
 \end{tikzpicture}
+
+% \begin{filecontents*}{100_seeds.csv}
+% seed, cost
+% \end{filecontents*}
+
+% \begin{tikzpicture}
+%     \begin{axis}[
+%         ymin = 9500, ymax = 11000,
+%         xmin = 0, xmax = 100
+%     ]
+%     \addplot table [x=seed, y=cost, col sep=comma] {100_seeds.csv};
+%     \end{axis}
+% \end{tikzpicture}
 
 \end{document}
