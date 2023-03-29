@@ -138,7 +138,6 @@ Hieronder kan u de resultaten zien voor de finale versie (v7), dit is de versie 
 \begin{center}
 \pgfplotstabletypeset{final_data.dat}
 \end{center}
-\section{Bijlagen}
 
 % \begin{figure}[ht]
 % \begin{center}
@@ -178,7 +177,7 @@ Hieronder kan u de resultaten zien voor de finale versie (v7), dit is de versie 
 \begin{center}
 \begin{tikzpicture}
     \begin{axis}[
-        width=3.5in,
+        width=3.3in,
         ylabel={Cost}, 
         xlabel={Runtime [min]},
         ytick={10000,15000, 20000, 25000},
@@ -221,5 +220,10 @@ Hieronder kan u de resultaten zien voor de finale versie (v7), dit is de versie 
 %     \addplot table [x=seed, y=cost, col sep=comma] {100_seeds.csv};
 %     \end{axis}
 % \end{tikzpicture}
+
+\section{Reflectie en suggesties}
+We konden ons programma nog verbeteren bij thresholding door wat te spelen met parameters om zo proberen te achterhalen of we al dan niet op een lokaal minimum zitten. Dit zou onze resultaten evenuteel nog verbeterd kunnen hebben.
+
+Ten slotte is het ook nog mogelijk om multithreading te implementeren, ook al is dit niet vanzelfsprekend in Rust.
 
 \end{document}
