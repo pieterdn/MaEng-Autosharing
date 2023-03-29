@@ -41,9 +41,7 @@ marginparwidth=1.5cm, marginparsep=0.4cm, margin=2.5cm]{geometry}
     breakatwhitespace=false,         
     breaklines=true,                 
     captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=0pt,                  
+    keepspaces=true,                                   
     showspaces=false,                
     showstringspaces=false,
     showtabs=false,                  
@@ -63,10 +61,61 @@ marginparwidth=1.5cm, marginparsep=0.4cm, margin=2.5cm]{geometry}
 \begin{document}
 \maketitle
 
+\section{Oplossingsvoorstelling}
+De oplossing wordt voorgesteld door een object dat 3 attributen heeft. De eerste is een req\_to\_car array. Hierbij stelt elke index een reservatie voor en elke waarde een wagen. De tweede is een car\_to\_zone array. Hierbij stelt elke index een wagen voor en elke waarde een zone. De laatste is een int die de cost voorstelt.
+
+Hieronder de oplossingsvoorstelling zowel in Python als in Rust.
+\begin{lstlisting}[language=Python]
+#Python
+class SolutionModel:
+    req_to_car: npt.NDArray[np.int16]   # Give req as index get car
+    car_to_zone: npt.NDArray[np.int16]  # Give car as index get zone
+    cost: int
+\end{lstlisting}
+
+\begin{lstlisting}[language=C]
+//Rust
+pub struct SolutionModel<'a> {
+    pub req_to_car: Vec<i64>,
+    pub car_to_zone: Vec<i64>,
+    pub cost: i64
+}
+\end{lstlisting}
+
+Deze voorstelling is gebaseerd op de output-file dat gegenereerd moet worden. Daardoor is het wegschrijven naar deze file dus erg gemakkelijk.
+
 \section{Datavoorstelling}
 
-\section{Sectie}
+\section{Initiele Oplossing}
+Om de initiele oplossing te berekenen gaan we sequentieel over de lijst van reservaties. Bij elke reservatie gaan we de verschillende wagens af. Eerst wordt er nagegaan of de wagen reeds aan een zone gelinkt is, indien dit nog niet het geval is, plaatsen we de wagen in de zone van de reservatie. 
 
-\subsection{Subsectie}
+Indien de wagen al aan een zone gelinkt is checken we of deze in de (naburige) zone van de reservatie ligt. Indien dit het geval is wordt er gekeken of deze wagen dan ook beschikbaar is, zo ja linken we deze wagen aan de reservatie.
+
+Als er over alle wagens (die mogelijk zijn voor de specifieke reservatie) gegaan is en er geen wagen beschikbaar is, wordt er naar de volgende reservatie gegaan en blijft de reservatie ontoegewezen.
+
+\section{Zoekomgeving}
+
+\subsection{Kleine Operator}
+
+\subsection{Grote Operator}
+
+\section{Metaheuristiek}
+\subsection{Simulated Annealing}
+
+\subsection{Thresholding}
+
+\section{Bijlagen}
+\begin{filecontents*}{100_seeds.csv}
+seed, cost
+\end{filecontents*}
+
+\begin{tikzpicture}
+    \begin{axis}[
+        ymin = 9500, ymax = 11000,
+        xmin = 0, xmax = 100
+    ]
+    \addplot table [x=seed, y=cost, col sep=comma] {100_seeds.csv};
+    \end{axis}
+\end{tikzpicture}
 
 \end{document}
