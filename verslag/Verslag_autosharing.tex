@@ -65,27 +65,32 @@ marginparwidth=1.5cm, marginparsep=0.4cm, margin=2.5cm]{geometry}
 \section{Oplossingsvoorstelling}
 De oplossing wordt voorgesteld door een object dat 3 attributen heeft. De eerste is een req\_to\_car array. Hierbij stelt elke index een reservatie voor en elke waarde een wagen. De tweede is een car\_to\_zone array. Hierbij stelt elke index een wagen voor en elke waarde een zone. De laatste is een int die de cost voorstelt.
 
-Hieronder de oplossingsvoorstelling zowel in Python als in Rust.
-\begin{lstlisting}[language=Python]
-#Python
-class SolutionModel:
-    req_to_car: npt.NDArray[np.int16]   # Give req as index get car
-    car_to_zone: npt.NDArray[np.int16]  # Give car as index get zone
-    cost: int
-\end{lstlisting}
+% Hieronder de oplossingsvoorstelling in Python, aangezien deze analoog is in Rust.
+% \begin{lstlisting}[language=Python]
+% #Python
+% class SolutionModel:
+%     req_to_car: npt.NDArray[np.int16]   # Give req as index get car
+%     car_to_zone: npt.NDArray[np.int16]  # Give car as index get zone
+%     cost: int
+% \end{lstlisting}
 
-\begin{lstlisting}[language=C]
-//Rust
-pub struct SolutionModel<'a> {
-    pub req_to_car: Vec<i64>,
-    pub car_to_zone: Vec<i64>,
-    pub cost: i64
-}
-\end{lstlisting}
-
-Deze voorstelling is gebaseerd op de output-file dat gegenereerd moet worden. Daardoor is het wegschrijven naar deze file dus erg gemakkelijk.
+Deze voorstelling is gebaseerd op de output-file dat gegenereerd moet worden. Daardoor is het wegschrijven naar deze file erg gemakkelijk.
 
 \section{Datavoorstelling}
+Om berekeningen te doen werken we met een object dat volgende attributen heeft:
+\begin{itemize}
+    \item 1D Array of ints: reservation id as index, get corresponding car
+    \item 1D Array of ints: car id as index, get corresponding zone
+    \item 1D Array of ints: reservation id as index, get corresponding cost
+    \item 2D Array of ints: car id as index, get list of corresponding reservations
+    \item 2D Array of bools: row for every reservation, every row has length = \#cars
+    \item 2D Array of bools: row for every zone, every row has length = \#cars
+    \item 1D Array of RequestStructs: reservation id is the index
+    \item 1D Array of ZoneStructs: zone id is the index
+    \item int: cost
+\end{itemize}
+
+Dit in combinatie met twee structs, een RequestStruct en ZoneStruct. De RequestStruct houdt alle informatie bij over 1 reservatie. Dit gaat dan over de zone, dag, starttijd, tijd, lijst van mogelijke wagens, penalty 1 en penalty 2 kost. De ZoneStruct houdt dan weer informatie bij over 1 zone. Hiermee wordt bedoeld: een lijst van aanliggende zones, een booleaanse lijst die de relatie geeft t.o.v. elke andere zone.
 
 
 \section{Initiele Oplossing}
@@ -96,10 +101,21 @@ Indien de wagen al aan een zone gelinkt is checken we of deze in de (naburige) z
 Als er over alle wagens (die mogelijk zijn voor de specifieke reservatie) gegaan is en er geen wagen beschikbaar is, wordt er naar de volgende reservatie gegaan en blijft de reservatie ontoegewezen.
 
 \section{Zoekomgeving}
+Onze zoekomgeving werd gedefineerd door twee operatoren. Een kleine die eerder kleine aanpassingen maakt en een grote die grotere sprongen maakt.
 
 \subsection{Kleine Operator}
+De kleine operator itereert random over de verschillende reservaties en per reservatie random over de verschillende wagens. Er wordt telkens gecheckt of er geen (beter) wagen kan gevonden worden voor een reservatie. Met beter wordt hier voornamelijk bedoeld een wagen die in de eigen zone van een reservatie ligt en niet in een naburige. De resultaten van enkel deze operator zijn te zien als v1 op \ref{360_res}.
 
 \subsection{Grote Operator}
+Deze werd van begin af aan reeds gecombineerd met de kleine operator. Dit door eerst de grote operator uit te voeren en wanneer deze geen verbetering meer gaf de klein verder uit te voeren.
+
+Versie 1: verplaats een random wagen naar een random zone en gaat vervolgens alle reservaties af om te kijken of er een wagen kan aan toegewezen worden. Resultaten te zien als v2 op \ref{360_res}.
+
+Versie 2: iteert random over een lijst met wagens en per wagen random over een lijst met zones. Vervolgens wordt dan hetzelfde gedaan als bij Versie 1. Een groot verschil is dat hierbij de beste wordt gezocht. Alle combinaties worden dus geprobeerd en beste wordt gekozen. Resultaten te zien als v3 op \ref{360_res}. Het is duidelijk te zien op de grafiek dat deze manier slecht werkt op korte tijd, omdat de operator zo veel computing time nodig heeft.
+
+Versie 3: i.p.v. zoals in Versie 2 de beste te zoeken, wordt dit keer de eerste beste genomen. We zien duidelijk op \ref{360_res}, dat v4 die hiermee correspondeerd een beter resultaat geeft.
+
+Versie 4: hierbij werd geen aanpassing gedaan aan de operator zelf, maar aan wanneer deze wordt uitgevoerd in combinatie met de kleine operator. In het begin blijven we de grote operator uitvoeren totdat deze geen verbetering meer geeft. Hierna voeren we de kleine operator 5 keer uit, waarna we de grote nog een keer uitvoeren. Als de grote operator in totaal 2 keer gefaald heeft, slaan we de huidige oplossing op en beginnen we met een nieuwe initiele oplossing. Iets dat we ook pas sinds deze versie doen. We zien op \ref{360_res} dat het resultaat (v5) voornamelijk beter is bij een langere runtime.
 
 \section{Metaheuristiek}
 \subsection{Simulated Annealing (v6)}
@@ -114,39 +130,39 @@ Hieronder kan u de resultaten zien voor de finale versie (v7), dit is de versie 
 \end{center}
 \section{Bijlagen}
 
-\begin{figure}[ht]
-\begin{center}
-\begin{tikzpicture}
-\begin{axis}[
-    width=3.5in,
-    ylabel={Cost}, 
-    xlabel={Runtime [min]},
-    ytick={10000,11000,12000,13000},
-    ymajorgrids=true,
-    grid style=dashed,
-    tick label style={/pgf/number format/fixed},
-    scaled ticks=false,
-    legend pos=outer north east,
-    ]
-    \addplot table [y=v1, x=Time]{data_100.dat};
-    \addlegendentry{Version 1}
-    \addplot table [y=v2, x=Time]{data_100.dat};
-    \addlegendentry{Version 2}
-    \addplot table [y=v3, x=Time]{data_100.dat};
-    \addlegendentry{Version 3}
-    \addplot table [y=v4, x=Time]{data_100.dat};
-    \addlegendentry{Version 4}
-    \addplot table [y=v5, x=Time]{data_100.dat};
-    \addlegendentry{Version 5}
-    \addplot table [y=v6, x=Time]{data_100.dat};
-    \addlegendentry{Version 6}
-    \addplot table [y=v7, x=Time]{data_100.dat};
-    \addlegendentry{Version 7}
-\end{axis}
-\end{tikzpicture}
-\end{center}
-\caption{Results for 100\_5\_14\_25.csv with seed 123}
-\end{figure}
+% \begin{figure}[ht]
+% \begin{center}
+% \begin{tikzpicture}
+% \begin{axis}[
+%     width=3.5in,
+%     ylabel={Cost}, 
+%     xlabel={Runtime [min]},
+%     ytick={10000,11000,12000,13000},
+%     ymajorgrids=true,
+%     grid style=dashed,
+%     tick label style={/pgf/number format/fixed},
+%     scaled ticks=false,
+%     legend pos=outer north east,
+%     ]
+%     \addplot table [y=v1, x=Time]{data_100.dat};
+%     \addlegendentry{Version 1}
+%     \addplot table [y=v2, x=Time]{data_100.dat};
+%     \addlegendentry{Version 2}
+%     \addplot table [y=v3, x=Time]{data_100.dat};
+%     \addlegendentry{Version 3}
+%     \addplot table [y=v4, x=Time]{data_100.dat};
+%     \addlegendentry{Version 4}
+%     \addplot table [y=v5, x=Time]{data_100.dat};
+%     \addlegendentry{Version 5}
+%     \addplot table [y=v6, x=Time]{data_100.dat};
+%     \addlegendentry{Version 6}
+%     \addplot table [y=v7, x=Time]{data_100.dat};
+%     \addlegendentry{Version 7}
+% \end{axis}
+% \end{tikzpicture}
+% \end{center}
+% \caption{Results for 100\_5\_14\_25.csv with seed 123}
+% \end{figure}
 
 \begin{figure}[ht]
 \begin{center}
@@ -163,22 +179,23 @@ Hieronder kan u de resultaten zien voor de finale versie (v7), dit is de versie 
         legend pos=outer north east,
         ]
         \addplot table [y=v1, x=Time]{data_360.dat};
-        \addlegendentry{Version 1}
+        \addlegendentry{v1 (Python)}
         \addplot table [y=v2, x=Time]{data_360.dat};
-        \addlegendentry{Version 2}
+        \addlegendentry{v2 (Python)}
         \addplot table [y=v3, x=Time]{data_360.dat};
-        \addlegendentry{Version 3}
+        \addlegendentry{v3 (Python)}
         \addplot table [y=v4, x=Time]{data_360.dat};
-        \addlegendentry{Version 4}
+        \addlegendentry{v4 (Python)}
         \addplot table [y=v5, x=Time]{data_360.dat};
-        \addlegendentry{Version 5}
+        \addlegendentry{v5 (Python)}
         \addplot table [y=v6, x=Time]{data_360.dat};
-        \addlegendentry{Version 6}
+        \addlegendentry{v6 (Rust)}
         \addplot table [y=v7, x=Time]{data_100.dat};
-        \addlegendentry{Version 7}
+        \addlegendentry{v7 (Rust)}
     \end{axis}
 \end{tikzpicture}
 \caption{Results for 360\_5\_71\_25.csv with seed 123}
+\label{360_res}
 \end{center}
 \end{figure}
 
